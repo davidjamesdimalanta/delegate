@@ -6,15 +6,18 @@ import {
     ThemeSettings
 } from '@/components/ui';
 import { ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
     <ThemedView style={{ flex: 1 }}>
       {/* Header */}
       <ThemedView 
         style={{
           padding: Spacing.md,
-          paddingTop: Spacing.xl,
+          paddingTop: insets.top + Spacing.md,
         }}
       >
         <ThemedText variant="headlineMedium">

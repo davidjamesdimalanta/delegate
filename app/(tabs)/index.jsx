@@ -1,16 +1,19 @@
 import {
-    Button,
-    Card,
-    PatientCard,
-    Spacing,
-    TaskCard,
-    ThemedText,
-    ThemedView,
-    ThemeToggleButton
+  Button,
+  Card,
+  PatientCard,
+  Spacing,
+  TaskCard,
+  ThemedText,
+  ThemedView,
+  ThemeToggleButton
 } from '@/components/ui';
 import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MedicalDashboard() {
+  const insets = useSafeAreaInsets();
+
   return (
     <ThemedView style={{ flex: 1 }}>
       {/* Header */}
@@ -20,7 +23,7 @@ export default function MedicalDashboard() {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: Spacing.md,
-          paddingTop: Spacing.xl,
+          paddingTop: insets.top + Spacing.md,
         }}
       >
         <ThemedText variant="headlineMedium">
