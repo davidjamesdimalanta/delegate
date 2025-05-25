@@ -27,11 +27,20 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
+        name="tasks"
+        options={{
+          title: 'Tasks',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="clipboard" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Patients',
           tabBarIcon: ({ color }) => (
-            <Ionicons name="medical" size={24} color={color} />
+            <Ionicons name="people" size={24} color={color} />
           ),
         }}
       />

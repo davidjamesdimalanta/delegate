@@ -1,6 +1,9 @@
 // Design System Components
 export { Button } from './Button';
 export { Card, PatientCard, TaskCard } from './Card';
+export { FullScreenNotesEditor } from './FullScreenNotesEditor';
+export { MapPreview } from './MapPreview';
+export { PatientDetailsDrawer } from './PatientDetailsDrawer';
 export { ThemeProvider, useEnhancedColorScheme, useTheme } from './ThemeProvider';
 export { ThemeSettings, ThemeToggleButton } from './ThemeSettings';
 

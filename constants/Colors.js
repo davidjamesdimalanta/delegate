@@ -198,6 +198,10 @@ export const TaskStatus = {
     light: '#388E3C',
     dark: '#81C784'
   },
+  urgent: {
+    light: '#D32F2F',
+    dark: '#F44336'
+  },
   overdue: {
     light: '#D32F2F',
     dark: '#F44336'

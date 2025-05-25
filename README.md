@@ -1,51 +1,68 @@
-# Medical Delegate App
+# Medical Delegate 🏥
 
-A comprehensive medical task delegation system designed for healthcare professionals, built with React Native and Expo.
+A modern, comprehensive medical task delegation system built with React Native and Expo. Designed for healthcare professionals to efficiently manage and delegate medical tasks to field nurses.
 
-## 🏥 Features
+## 🚀 Features
 
-- **Medical Task Management**: Efficient delegation and tracking of medical tasks
-- **Patient Cards**: Organized patient information with priority indicators
-- **Theme System**: Dynamic light/dark/system theme switching with persistent preferences
-- **Medical-Specific Design**: Color-coded priorities and status indicators optimized for healthcare
-- **Accessibility**: WCAG 2.1 AA compliant design with proper contrast ratios
-- **Cross-Platform**: Runs on iOS, Android, and Web
+- **Modern Design System**: Material Design 3 and Apple Human Interface Guidelines
+- **Patient Location Maps**: Interactive maps showing patient locations with address markers
+- **Medical Task Management**: Comprehensive task delegation with priority levels
+- **Dark/Light Theme**: Automatic theme switching with persistent preferences
+- **Medical Priority System**: Color-coded priority levels (Critical, High, Medium, Low)
+- **Field Nurse Support**: Optimized for nurses working in the field with location-based features
+- **Accessibility First**: Built with accessibility in mind
+- **Cross-Platform**: Works on iOS, Android, and Web
+
+## 🗺️ Maps Integration
+
+The app now includes interactive maps for patient locations:
+
+- **Patient Location Display**: Each patient card shows a small map preview with their location
+- **Address-Based Locations**: Patients are assigned real addresses instead of room numbers
+- **Field Nurse Optimization**: Designed for nurses who need to visit patients at various locations
+- **Interactive Markers**: Tap markers to see patient information and addresses
+
+### Map Features
+- Small map previews on patient cards
+- Fallback display when maps fail to load
+- Location permissions for enhanced functionality
+- Real-world addresses for realistic testing
 
 ## 🎨 Design System
 
-Built on Material Design 3 principles with medical-specific adaptations:
+### Patient Cards with Maps
+```javascript
+<PatientCard
+  patientName="John Doe"
+  patientId="PT-001"
+  location={{
+    address: "123 Main St, City, State 12345",
+    coordinates: {
+      latitude: 40.7128,
+      longitude: -74.0060
+    }
+  }}
+  priority="high"
+  onPress={() => navigate('PatientDetails')}
+/>
+```
 
-- **Theme Provider**: Custom theme context with persistent preferences
-- **Medical Color Priorities**: Critical (Red), High (Orange), Medium (Blue), Low (Green)
-- **Status Indicators**: Pending, In Progress, Completed, Overdue
-- **Typography**: Medical-specific text styles for patient names, IDs, and vital signs
-- **Components**: Cards, Buttons, Forms optimized for medical workflows
+### Map Preview Component
+```javascript
+<MapPreview
+  latitude={40.7128}
+  longitude={-74.0060}
+  address="123 Main St, New York, NY 10001"
+  size="small" // or "medium", "large"
+/>
+```
 
-## 🚀 Recent Updates
-
-### Theme Switching Fix (Latest)
-- ✅ Fixed theme switching not working in settings
-- ✅ Updated `useThemeColor` hook to use `useEnhancedColorScheme` from ThemeProvider
-- ✅ Replaced React Native's `useColorScheme` with enhanced version in all components
-- ✅ Fixed TypeScript issues with proper type assertions
-- ✅ Theme changes now properly update all themed components
-- ✅ Persistent theme preferences with AsyncStorage
-
-## 📱 Getting Started
-
-### Prerequisites
-- Node.js (v18 or later)
-- npm or yarn
-- Expo CLI
-- iOS Simulator (for iOS development)
-- Android Studio (for Android development)
-
-### Installation
+## 📦 Installation
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd medical-delegate-app
+git clone [repository-url]
+cd delegate
 ```
 
 2. Install dependencies:
@@ -53,9 +70,9 @@ cd medical-delegate-app
 npm install
 ```
 
-3. Start the development server:
+3. Install maps dependencies:
 ```bash
-npx expo start
+npx expo install react-native-maps
 ```
 
 4. Run on your preferred platform:
@@ -74,13 +91,15 @@ npx expo start
 │   │   ├── ThemeProvider.jsx
 │   │   ├── ThemeSettings.jsx
 │   │   ├── Card.jsx
+│   │   ├── MapPreview.jsx  # NEW: Map preview component
 │   │   └── Button.jsx
 │   ├── ThemedText.jsx
 │   └── ThemedView.jsx
 ├── constants/            # Design tokens and constants
 │   ├── Colors.js         # Theme colors
 │   ├── Spacing.js        # Spacing and layout
-│   └── Typography.js     # Text styles
+│   ├── Typography.js     # Text styles
+│   └── SamplePatients.js # NEW: Sample patient data with locations
 └── hooks/               # Custom React hooks
     └── useThemeColor.ts  # Theme-aware color hook
 ```

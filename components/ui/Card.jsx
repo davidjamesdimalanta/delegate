@@ -4,6 +4,7 @@ import { Shadows, Spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { TouchableOpacity, View } from 'react-native';
 import { ThemedText } from '../ThemedText';
+import { MapPreview } from './MapPreview';
 
 export function Card({
   children,
@@ -31,6 +32,10 @@ export function Card({
   const getStatusColor = () => {
     if (!status) return null;
     const statusColors = TaskStatus[status];
+    if (!statusColors) {
+      console.warn(`Unknown task status: ${status}`);
+      return null;
+    }
     return isDark ? statusColors.dark : statusColors.light;
   };
 
@@ -38,6 +43,10 @@ export function Card({
   const getPriorityColor = () => {
     if (!priority) return null;
     const priorityColors = MedicalPriority[priority];
+    if (!priorityColors) {
+      console.warn(`Unknown priority: ${priority}`);
+      return null;
+    }
     return isDark ? priorityColors.dark : priorityColors.light;
   };
 
@@ -162,7 +171,7 @@ export function Card({
 export function PatientCard({
   patientName,
   patientId,
-  room,
+  location,
   priority,
   onPress,
   children,
@@ -175,24 +184,45 @@ export function PatientCard({
       {...props}
     >
       <View style={{ marginBottom: Spacing.sm }}>
-        <ThemedText 
-          medicalVariant="patientName"
-          style={{ marginBottom: Spacing.xs }}
-        >
-          {patientName}
-        </ThemedText>
         <View style={{ 
           flexDirection: 'row', 
           justifyContent: 'space-between',
-          alignItems: 'center' 
+          alignItems: 'flex-start',
+          marginBottom: Spacing.xs
         }}>
-          <ThemedText medicalVariant="medicalId">
-            ID: {patientId}
-          </ThemedText>
-          {room && (
-            <ThemedText variant="bodySmall">
-              Room: {room}
+          <View style={{ flex: 1, marginRight: Spacing.sm }}>
+            <ThemedText 
+              medicalVariant="patientName"
+              style={{ marginBottom: Spacing.xs }}
+            >
+              {patientName}
             </ThemedText>
+            <ThemedText medicalVariant="medicalId">
+              ID: {patientId}
+            </ThemedText>
+          </View>
+          {location && (
+            <View style={{ alignItems: 'flex-end' }}>
+              <MapPreview
+                latitude={location.coordinates?.latitude}
+                longitude={location.coordinates?.longitude}
+                address={location.address}
+                size="small"
+                style={{ marginBottom: Spacing.xs }}
+              />
+              <ThemedText 
+                variant="bodySmall" 
+                style={{ 
+                  textAlign: 'right',
+                  maxWidth: 100,
+                  fontSize: 10,
+                  opacity: 0.7
+                }}
+                numberOfLines={2}
+              >
+                {location.address}
+              </ThemedText>
+            </View>
           )}
         </View>
       </View>

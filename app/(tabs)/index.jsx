@@ -1,18 +1,91 @@
 import {
   Button,
   Card,
+  FullScreenNotesEditor,
   PatientCard,
+  PatientDetailsDrawer,
   Spacing,
-  TaskCard,
   ThemedText,
   ThemedView,
   ThemeToggleButton
 } from '@/components/ui';
+import { SAMPLE_PATIENTS } from '@/constants/SamplePatients';
+import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MedicalDashboard() {
   const insets = useSafeAreaInsets();
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [notesEditorVisible, setNotesEditorVisible] = useState(false);
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [patientNotes, setPatientNotes] = useState({});
+
+  const handlePatientPress = (patient) => {
+    setSelectedPatient(patient);
+    setDrawerVisible(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerVisible(false);
+    // Small delay to avoid visual glitch when closing
+    setTimeout(() => setSelectedPatient(null), 300);
+  };
+
+  const handleEditNotes = (patient, currentNotes) => {
+    // Ensure we have a valid patient before proceeding
+    if (!patient) {
+      console.error('No patient provided to handleEditNotes');
+      return;
+    }
+    
+    // Close the drawer first
+    setDrawerVisible(false);
+    
+    // Set the editing patient immediately
+    setEditingPatient(patient);
+    
+    // Open the notes editor after a short delay to ensure drawer is closed
+    setTimeout(() => {
+      setNotesEditorVisible(true);
+    }, 100);
+  };
+
+  const handleSaveNotes = (notes) => {
+    if (editingPatient) {
+      setPatientNotes(prev => ({
+        ...prev,
+        [editingPatient.id]: notes
+      }));
+      
+      // Update the selected patient if it's the same one being edited
+      if (selectedPatient && selectedPatient.id === editingPatient.id) {
+        setSelectedPatient(prev => ({
+          ...prev,
+          notes: notes
+        }));
+      }
+    }
+  };
+
+  const handleCloseNotesEditor = () => {
+    setNotesEditorVisible(false);
+    
+    // Reopen the drawer if we still have a selected patient
+    setTimeout(() => {
+      if (selectedPatient || editingPatient) {
+        setDrawerVisible(true);
+      }
+      setEditingPatient(null);
+    }, 100);
+  };
+
+  // Get patient with updated notes
+  const getPatientWithNotes = (patient) => ({
+    ...patient,
+    notes: patientNotes[patient.id] || patient.notes || ''
+  });
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -27,7 +100,7 @@ export default function MedicalDashboard() {
         }}
       >
         <ThemedText variant="headlineMedium">
-          Medical Delegate
+          Patients
         </ThemedText>
         <ThemeToggleButton />
       </ThemedView>
@@ -40,15 +113,15 @@ export default function MedicalDashboard() {
         {/* Welcome Section */}
         <Card variant="elevated" style={{ marginBottom: Spacing.lg }}>
           <ThemedText variant="titleLarge" style={{ marginBottom: Spacing.sm }}>
-            Welcome to Medical Delegate
+            Patient Dashboard
           </ThemedText>
           <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.md }}>
-            Efficiently manage and delegate medical tasks to field nurses with our comprehensive task management system.
+            View and manage patient information, access medical records, and track patient care progress.
           </ThemedText>
           <Button 
-            title="View All Tasks" 
+            title="View All Patients" 
             variant="filled" 
-            onPress={() => console.log('Navigate to tasks')}
+            onPress={() => console.log('Navigate to all patients')}
           />
         </Card>
 
@@ -91,66 +164,25 @@ export default function MedicalDashboard() {
           Recent Patients
         </ThemedText>
         
-        <PatientCard
-          patientName="Sarah Johnson"
-          patientId="MRN-12345"
-          room="Room 204"
-          priority="high"
-          onPress={() => console.log('View patient details')}
-          style={{ marginBottom: Spacing.md }}
-        >
-          <ThemedText variant="bodySmall" style={{ marginTop: Spacing.sm }}>
-            Last vitals: 98.6°F, 120/80 mmHg, 72 bpm
-          </ThemedText>
-        </PatientCard>
-
-        <PatientCard
-          patientName="Michael Chen"
-          patientId="MRN-67890"
-          room="Room 156"
-          priority="medium"
-          onPress={() => console.log('View patient details')}
-          style={{ marginBottom: Spacing.md }}
-        >
-          <ThemedText variant="bodySmall" style={{ marginTop: Spacing.sm }}>
-            Scheduled for medication review at 2:00 PM
-          </ThemedText>
-        </PatientCard>
-
-        {/* Task Cards */}
-        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          Pending Tasks
-        </ThemedText>
-
-        <TaskCard
-          taskTitle="Medication Administration"
-          taskDescription="Administer insulin to patient in Room 204"
-          dueTime="2:30 PM"
-          status="pending"
-          priority="critical"
-          onPress={() => console.log('View task details')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Vital Signs Check"
-          taskDescription="Record vital signs for post-op patient"
-          dueTime="3:00 PM"
-          status="inProgress"
-          priority="medium"
-          onPress={() => console.log('View task details')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Patient Discharge"
-          taskDescription="Complete discharge paperwork and instructions"
-          dueTime="4:15 PM"
-          status="completed"
-          priority="low"
-          onPress={() => console.log('View task details')}
-          style={{ marginBottom: Spacing.md }}
-        />
+        {/* Render first few sample patients */}
+        {SAMPLE_PATIENTS.slice(0, 3).map((patient) => (
+          <PatientCard
+            key={patient.id}
+            patientName={patient.name}
+            patientId={patient.id}
+            location={{
+              address: patient.address,
+              coordinates: patient.coordinates
+            }}
+            priority={patient.priority}
+            onPress={() => handlePatientPress(getPatientWithNotes(patient))}
+            style={{ marginBottom: Spacing.md }}
+          >
+            <ThemedText variant="bodySmall" style={{ marginTop: Spacing.sm }}>
+              {patient.vitals}
+            </ThemedText>
+          </PatientCard>
+        ))}
 
         {/* Design System Demo */}
         <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
@@ -184,23 +216,50 @@ export default function MedicalDashboard() {
           </ThemedText>
         </Card>
 
-        <Card variant="filled" style={{ marginBottom: Spacing.md }}>
-          <ThemedText variant="titleSmall" style={{ marginBottom: Spacing.sm }}>
-            Button Variants
-          </ThemedText>
-          <View style={{ gap: Spacing.sm }}>
-            <Button title="Filled Button" variant="filled" />
-            <Button title="Outlined Button" variant="outlined" />
-            <Button title="Text Button" variant="text" />
-            <Button title="Tonal Button" variant="tonal" />
-            <Button title="Critical Priority" variant="filled" priority="critical" />
-            <Button title="Loading Button" variant="filled" loading />
-          </View>
-        </Card>
+        {/* Additional patient cards to show more locations */}
+        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+          More Patients
+        </ThemedText>
+        
+        {SAMPLE_PATIENTS.slice(3).map((patient) => (
+          <PatientCard
+            key={patient.id}
+            patientName={patient.name}
+            patientId={patient.id}
+            location={{
+              address: patient.address,
+              coordinates: patient.coordinates
+            }}
+            priority={patient.priority}
+            onPress={() => handlePatientPress(getPatientWithNotes(patient))}
+            style={{ marginBottom: Spacing.md }}
+          >
+            <ThemedText variant="bodySmall" style={{ marginTop: Spacing.sm }}>
+              {patient.vitals}
+            </ThemedText>
+          </PatientCard>
+        ))}
 
-        {/* Bottom spacing */}
+        {/* Final spacer */}
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
+
+      {/* Patient Details Drawer */}
+      <PatientDetailsDrawer
+        visible={drawerVisible}
+        onClose={handleCloseDrawer}
+        patient={selectedPatient}
+        onEditNotes={handleEditNotes}
+      />
+
+      {/* Full Screen Notes Editor */}
+      <FullScreenNotesEditor
+        visible={notesEditorVisible}
+        onClose={handleCloseNotesEditor}
+        onSave={handleSaveNotes}
+        patient={editingPatient}
+        initialNotes={editingPatient ? (patientNotes[editingPatient.id] || editingPatient.notes || '') : ''}
+      />
     </ThemedView>
   );
 } 
