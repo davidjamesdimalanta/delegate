@@ -1,116 +1,25 @@
 import {
-    Button,
-    FullScreenNotesEditor,
-    PatientCard,
-    PatientDetailsDrawer,
-    Spacing,
-    TaskCard,
-    ThemedText,
-    ThemedView,
-    ThemeToggleButton
+  Button,
+  FamilySupportCompact,
+  FullScreenNotesEditor,
+  GoalsOfCareCompact,
+  PatientCard,
+  PatientDetailsDrawer,
+  Spacing,
+  SymptomAssessmentCompact,
+  TaskCard,
+  ThemedText,
+  ThemedView,
+  ThemeToggleButton
 } from '@/components/ui';
-import { SAMPLE_PATIENTS } from '@/constants/SamplePatients';
+import { usePatient } from '@/hooks/usePatients';
+import { useTask } from '@/hooks/useTasks';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// Sample task data - in a real app this would come from your data store
-const SAMPLE_TASKS = [
-  {
-    id: '1',
-    title: 'Medication Administration',
-    description: 'Administer insulin to patient in Room 204. Check blood sugar levels before administration and record results.',
-    dueTime: '2:30 PM',
-    status: 'pending',
-    priority: 'critical',
-    patientId: 'MRN-12345',
-    notes: 'Patient has been showing elevated glucose levels consistently. Monitor for any adverse reactions.'
-  },
-  {
-    id: '2',
-    title: 'Vital Signs Check',
-    description: 'Record vital signs for post-op patient including blood pressure, heart rate, temperature, and respiratory rate.',
-    dueTime: '3:00 PM',
-    status: 'pending',
-    priority: 'medium',
-    patientId: 'MRN-67890',
-    notes: 'Patient is recovering well from surgery. Continue monitoring every 2 hours.'
-  },
-  {
-    id: '3',
-    title: 'Patient Discharge',
-    description: 'Complete discharge paperwork and provide patient with post-care instructions and medication schedule.',
-    dueTime: '4:15 PM',
-    status: 'pending',
-    priority: 'low',
-    patientId: 'MRN-24680',
-    notes: ''
-  },
-  {
-    id: '4',
-    title: 'Wound Care Assessment',
-    description: 'Assess and redress surgical wound for patient in Room 302. Check for signs of infection.',
-    dueTime: '5:00 PM',
-    status: 'pending',
-    priority: 'medium',
-    patientId: 'MRN-13579',
-    notes: 'Wound healing progressing normally. No signs of infection observed.'
-  },
-  {
-    id: '5',
-    title: 'Physical Therapy Session',
-    description: 'Assist patient with mobility exercises and rehabilitation following hip replacement surgery.',
-    dueTime: '6:30 PM',
-    status: 'pending',
-    priority: 'low',
-    patientId: 'MRN-97531',
-    notes: ''
-  },
-  {
-    id: '6',
-    title: 'Emergency Response',
-    description: 'Respond to urgent call in ICU - patient monitoring required for cardiac irregularities.',
-    dueTime: 'NOW',
-    status: 'pending',
-    priority: 'critical',
-    patientId: 'MRN-86420',
-    notes: 'URGENT: Patient showing cardiac irregularities. Immediate attention required.'
-  },
-  // Completed Tasks
-  {
-    id: '7',
-    title: 'Morning Medication Round',
-    description: 'Administered all scheduled morning medications to patients in assigned ward. All medications given on time without complications.',
-    dueTime: '8:00 AM',
-    status: 'completed',
-    priority: 'medium',
-    patientId: 'MRN-12345',
-    notes: 'All morning medications administered successfully. Patient responded well to insulin dose adjustment.'
-  },
-  {
-    id: '8',
-    title: 'Patient Assessment',
-    description: 'Completed comprehensive initial assessment for new patient admission including medical history, current symptoms, and care plan development.',
-    dueTime: '10:30 AM',
-    status: 'completed',
-    priority: 'low',
-    patientId: 'MRN-67890',
-    notes: 'Initial assessment completed. Patient is stable and comfortable. Care plan established with physician.'
-  },
-  {
-    id: '9',
-    title: 'Blood Draw',
-    description: 'Collected blood samples for routine lab work including CBC, metabolic panel, and lipid profile as ordered by physician.',
-    dueTime: '11:15 AM',
-    status: 'completed',
-    priority: 'medium',
-    patientId: 'MRN-24680',
-    notes: 'Blood samples collected without complications. Samples sent to lab for processing. Results expected by 2 PM.'
-  }
-];
 
 export default function TaskDetailsPage() {
   const insets = useSafeAreaInsets();
@@ -125,24 +34,66 @@ export default function TaskDetailsPage() {
   const [taskStatuses, setTaskStatuses] = useState({}); // Track task status changes
 
   // Theme colors
-  const backgroundColor = useThemeColor({}, 'background');
   const surfaceColor = useThemeColor({}, 'surface');
   const outlineColor = useThemeColor({}, 'outline');
   const onSurfaceColor = useThemeColor({}, 'onSurface');
 
-  // Find the task by ID
-  const task = SAMPLE_TASKS.find(t => t.id === id);
+  // Get the task from database
+  const { task, loading, error } = useTask(id);
   
   // Get current task status (from local state or original task)
   const currentStatus = taskStatuses[id] || task?.status || 'pending';
   
-  // Find the related patient
-  const patient = task ? SAMPLE_PATIENTS.find(p => p.id === task.patientId) : null;
+  // Get the related patient from database
+  const { patient, loading: patientLoading, error: patientError } = usePatient(task?.patient_id || '');
 
-  if (!task) {
+  if (loading) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+          Loading task data...
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error || !task) {
     return (
       <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ThemedText variant="titleLarge">Task not found</ThemedText>
+        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm, textAlign: 'center' }}>
+          {error || 'Unable to load task data'}
+        </ThemedText>
+        <Button 
+          title="Go Back" 
+          onPress={() => router.back()} 
+          style={{ marginTop: Spacing.md }}
+        />
+      </ThemedView>
+    );
+  }
+
+  // Show loading state while patient data is loading
+  if (patientLoading) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+          Loading patient data...
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  // Show error if patient not found
+  if (patientError || !patient) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ThemedText variant="titleLarge">Patient not found</ThemedText>
+        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm, textAlign: 'center' }}>
+          {patientError || 'Unable to load patient data for this task'}
+        </ThemedText>
         <Button 
           title="Go Back" 
           onPress={() => router.back()} 
@@ -175,6 +126,7 @@ export default function TaskDetailsPage() {
         ...prev,
         [editingTask.id]: notes
       }));
+      // TODO: Update task notes in database
     }
   };
 
@@ -185,6 +137,8 @@ export default function TaskDetailsPage() {
       ...prev,
       [task.id]: 'completed'
     }));
+    
+    // TODO: Update task status in database
     
     // Show brief feedback before navigating back
     setTimeout(() => {
@@ -214,19 +168,8 @@ export default function TaskDetailsPage() {
       ...prev,
       [task.id]: newStatus
     }));
-  };
-
-  const getSecondaryButtonTitle = () => {
-    switch (currentStatus) {
-      case 'pending':
-        return 'Mark as In Progress';
-      case 'inProgress':
-        return 'Mark as Pending';
-      case 'completed':
-        return 'Reopen Task';
-      default:
-        return 'Mark as In Progress';
-    }
+    
+    // TODO: Update task status in database
   };
 
   const getSecondaryButtonContent = () => {
@@ -319,7 +262,7 @@ export default function TaskDetailsPage() {
         <TaskCard
           taskTitle={task.title}
           taskDescription={task.description}
-          dueTime={task.dueTime}
+          dueTime={task.due_time}
           status={currentStatus}
           priority={task.priority}
           style={{ marginBottom: Spacing.lg }}
@@ -345,6 +288,45 @@ export default function TaskDetailsPage() {
                 {patient.vitals}
               </ThemedText>
             </PatientCard>
+          </View>
+        )}
+
+        {/* Phase 2: Palliative Care Task Sections */}
+        {patient && (
+          <View style={{ marginBottom: Spacing.lg }}>
+            <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+              Care Assessment & Planning
+            </ThemedText>
+            
+            {/* Symptom Assessment Section */}
+            <SymptomAssessmentCompact
+              patient={patient}
+              onPress={() => {
+                console.log('Navigate to symptom assessment page');
+                router.push(`/task-details/${id}/symptom-assessment`);
+              }}
+              style={{ marginBottom: Spacing.md }}
+            />
+
+            {/* Family Support Section */}
+            <FamilySupportCompact
+              patient={patient}
+              onPress={() => {
+                console.log('Navigate to family support page');
+                router.push(`/task-details/${id}/family-support`);
+              }}
+              style={{ marginBottom: Spacing.md }}
+            />
+
+            {/* Goals of Care Section */}
+            <GoalsOfCareCompact
+              patient={patient}
+              onPress={() => {
+                console.log('Navigate to goals of care page');
+                router.push(`/task-details/${id}/goals-of-care`);
+              }}
+              style={{ marginBottom: Spacing.md }}
+            />
           </View>
         )}
 

@@ -5,18 +5,82 @@ import {
   ThemedView,
   ThemeToggleButton
 } from '@/components/ui';
+import { useTasks } from '@/hooks/useTasks';
+import { debugTasksTable } from '@/lib/database';
 import { useRouter } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TasksPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { tasks, loading, error, refreshTasks } = useTasks();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('=== TASKS PAGE DEBUG ===');
+    console.log('Tasks array:', tasks);
+    console.log('Tasks length:', tasks.length);
+    console.log('Loading:', loading);
+    console.log('Error:', error);
+    console.log('========================');
+  }, [tasks, loading, error]);
+
+  // Add this useEffect to run debugging on mount
+  useEffect(() => {
+    console.log('📱 TasksPage: Component mounted, running debugTasksTable...');
+    debugTasksTable();
+  }, []);
 
   const handleTaskPress = (taskId) => {
     console.log(`Task pressed: ${taskId}`);
     router.push(`/task-details/${taskId}`);
   };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh button pressed...');
+    setRefreshing(true);
+    await refreshTasks();
+    setRefreshing(false);
+    console.log('✅ Manual refresh completed');
+  };
+
+  // Separate tasks by status
+  const pendingTasks = tasks.filter(task => task.status === 'pending' || task.status === 'inProgress');
+  const completedTasks = tasks.filter(task => task.status === 'completed');
+
+  console.log('Pending tasks:', pendingTasks.length);
+  console.log('Completed tasks:', completedTasks.length);
+
+  if (loading && tasks.length === 0) {
+    console.log('Showing loading state');
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+          Loading tasks...
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    console.log('Showing error state:', error);
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.md }}>
+        <ThemedText variant="titleLarge" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
+          Error Loading Tasks
+        </ThemedText>
+        <ThemedText variant="bodyMedium" style={{ textAlign: 'center' }}>
+          {error}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  console.log('Rendering main tasks view');
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -40,106 +104,62 @@ export default function TasksPage() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: Spacing.md }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
-        {/* Pending Tasks */}
-        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          Pending Tasks
+        {/* Debug Info */}
+        <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.md, opacity: 0.7 }}>
+          Debug: {tasks.length} total tasks | Loading: {loading.toString()} | Error: {error || 'none'}
         </ThemedText>
 
-        <TaskCard
-          taskTitle="Medication Administration"
-          taskDescription="Administer insulin to patient in Room 204"
-          dueTime="2:30 PM"
-          status="pending"
-          priority="critical"
-          onPress={() => handleTaskPress('1')}
-          style={{ marginBottom: Spacing.md }}
-        />
+        {/* Pending Tasks */}
+        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+          Pending Tasks ({pendingTasks.length})
+        </ThemedText>
 
-        <TaskCard
-          taskTitle="Vital Signs Check"
-          taskDescription="Record vital signs for post-op patient"
-          dueTime="3:00 PM"
-          status="pending"
-          priority="medium"
-          onPress={() => handleTaskPress('2')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Patient Discharge"
-          taskDescription="Complete discharge paperwork and instructions"
-          dueTime="4:15 PM"
-          status="pending"
-          priority="low"
-          onPress={() => handleTaskPress('3')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Wound Care Assessment"
-          taskDescription="Assess and redress surgical wound for patient in Room 302"
-          dueTime="5:00 PM"
-          status="pending"
-          priority="medium"
-          onPress={() => handleTaskPress('4')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Physical Therapy Session"
-          taskDescription="Assist patient with mobility exercises and rehabilitation"
-          dueTime="6:30 PM"
-          status="pending"
-          priority="low"
-          onPress={() => handleTaskPress('5')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Emergency Response"
-          taskDescription="Respond to urgent call in ICU - patient monitoring required"
-          dueTime="NOW"
-          status="pending"
-          priority="critical"
-          onPress={() => handleTaskPress('6')}
-          style={{ marginBottom: Spacing.md }}
-        />
+        {pendingTasks.length === 0 ? (
+          <ThemedText variant="bodyMedium" style={{ fontStyle: 'italic', opacity: 0.7, marginBottom: Spacing.lg }}>
+            No pending tasks
+          </ThemedText>
+        ) : (
+          pendingTasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              taskTitle={task.title}
+              taskDescription={task.description}
+              dueTime={task.due_time}
+              status={task.status}
+              priority={task.priority}
+              onPress={() => handleTaskPress(task.id)}
+              style={{ marginBottom: Spacing.md }}
+            />
+          ))
+        )}
 
         {/* Completed Tasks Section */}
         <ThemedText variant="titleMedium" style={{ marginTop: Spacing.lg, marginBottom: Spacing.md }}>
-          Completed Tasks
+          Completed Tasks ({completedTasks.length})
         </ThemedText>
 
-        <TaskCard
-          taskTitle="Morning Medication Round"
-          taskDescription="Administered all scheduled morning medications"
-          dueTime="8:00 AM"
-          status="completed"
-          priority="medium"
-          onPress={() => handleTaskPress('7')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Patient Assessment"
-          taskDescription="Completed initial assessment for new patient in Room 105"
-          dueTime="10:30 AM"
-          status="completed"
-          priority="low"
-          onPress={() => handleTaskPress('8')}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        <TaskCard
-          taskTitle="Blood Draw"
-          taskDescription="Collected blood samples for lab work"
-          dueTime="11:15 AM"
-          status="completed"
-          priority="medium"
-          onPress={() => handleTaskPress('9')}
-          style={{ marginBottom: Spacing.md }}
-        />
+        {completedTasks.length === 0 ? (
+          <ThemedText variant="bodyMedium" style={{ fontStyle: 'italic', opacity: 0.7 }}>
+            No completed tasks
+          </ThemedText>
+        ) : (
+          completedTasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              taskTitle={task.title}
+              taskDescription={task.description}
+              dueTime={task.due_time}
+              status={task.status}
+              priority={task.priority}
+              onPress={() => handleTaskPress(task.id)}
+              style={{ marginBottom: Spacing.md }}
+            />
+          ))
+        )}
 
         {/* Final spacer */}
         <View style={{ height: Spacing.xl }} />

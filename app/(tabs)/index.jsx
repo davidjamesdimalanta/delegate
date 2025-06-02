@@ -2,16 +2,18 @@ import {
   Button,
   Card,
   FullScreenNotesEditor,
-  PatientCard,
+  PalliativePatientCard,
   PatientDetailsDrawer,
   Spacing,
   ThemedText,
   ThemedView,
   ThemeToggleButton
 } from '@/components/ui';
-import { SAMPLE_PATIENTS } from '@/constants/SamplePatients';
+import { usePatients } from '@/hooks/usePatients';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MedicalDashboard() {
@@ -21,6 +23,12 @@ export default function MedicalDashboard() {
   const [notesEditorVisible, setNotesEditorVisible] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
   const [patientNotes, setPatientNotes] = useState({});
+
+  // Get patient data from database
+  const { patients, loading, error, refreshPatients } = usePatients();
+
+  // Get theme colors
+  const primaryColor = useThemeColor({}, 'primary');
 
   const handlePatientPress = (patient) => {
     setSelectedPatient(patient);
@@ -100,7 +108,7 @@ export default function MedicalDashboard() {
         }}
       >
         <ThemedText variant="headlineMedium">
-          Patients
+          Palliative Care Dashboard
         </ThemedText>
         <ThemeToggleButton />
       </ThemedView>
@@ -113,15 +121,15 @@ export default function MedicalDashboard() {
         {/* Welcome Section */}
         <Card variant="elevated" style={{ marginBottom: Spacing.lg }}>
           <ThemedText variant="titleLarge" style={{ marginBottom: Spacing.sm }}>
-            Patient Dashboard
+            Patient Care Coordination
           </ThemedText>
           <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.md }}>
-            View and manage patient information, access medical records, and track patient care progress.
+            Comprehensive palliative care management including symptom assessment, family support, and interdisciplinary coordination.
           </ThemedText>
           <Button 
             title="View All Patients" 
             variant="filled" 
-            onPress={() => console.log('Navigate to all patients')}
+            onPress={() => router.push('/patients-list')}
           />
         </Card>
 
@@ -135,38 +143,63 @@ export default function MedicalDashboard() {
           marginBottom: Spacing.lg 
         }}>
           <Button 
-            title="New Task" 
+            title="Symptom Assessment" 
             variant="filled" 
-            priority="medium"
+            priority="symptom-care"
             size="small"
             style={{ flex: 1, marginRight: Spacing.xs }}
-            onPress={() => console.log('Create new task')}
+            onPress={() => console.log('Start symptom assessment')}
           />
           <Button 
-            title="Urgent" 
+            title="Family Support" 
             variant="outlined" 
-            priority="critical"
+            priority="family-support"
             size="small"
             style={{ flex: 1, marginHorizontal: Spacing.xs }}
-            onPress={() => console.log('View urgent tasks')}
+            onPress={() => console.log('View family support')}
           />
           <Button 
-            title="Reports" 
+            title="Team Notes" 
             variant="text" 
             size="small"
             style={{ flex: 1, marginLeft: Spacing.xs }}
-            onPress={() => console.log('View reports')}
+            onPress={() => console.log('View team notes')}
           />
         </View>
 
         {/* Patient Cards */}
         <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          Recent Patients
+          Current Patients
         </ThemedText>
         
-        {/* Render first few sample patients */}
-        {SAMPLE_PATIENTS.slice(0, 3).map((patient) => (
-          <PatientCard
+        {/* Show loading indicator */}
+        {loading && patients.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
+            <ActivityIndicator size="large" color={primaryColor} />
+            <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+              Loading patients...
+            </ThemedText>
+          </View>
+        )}
+
+        {/* Show error message */}
+        {error && (
+          <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
+            <ThemedText variant="bodyMedium" style={{ color: 'red', marginBottom: Spacing.sm }}>
+              Error loading patients: {error}
+            </ThemedText>
+            <Button 
+              title="Retry" 
+              variant="outlined" 
+              onPress={refreshPatients}
+              size="small"
+            />
+          </Card>
+        )}
+
+        {/* Render database patients */}
+        {patients.map((patient) => (
+          <PalliativePatientCard
             key={patient.id}
             patientName={patient.name}
             patientId={patient.id}
@@ -178,88 +211,79 @@ export default function MedicalDashboard() {
             onPress={() => handlePatientPress(getPatientWithNotes(patient))}
             style={{ marginBottom: Spacing.md }}
           >
-            <ThemedText variant="bodySmall" style={{ marginTop: Spacing.sm }}>
-              {patient.vitals}
-            </ThemedText>
-          </PatientCard>
+            {/* Simplified last seen information */}
+            {patient.last_seen_by && (
+              <View style={{ marginTop: Spacing.sm, marginLeft: -Spacing.sm }}>
+                <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.xs, marginLeft: Spacing.sm }}>
+                  Last seen: {new Date(patient.last_seen_by.date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })} at {patient.last_seen_by.time}
+                </ThemedText>
+                <View style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.05)',
+                  paddingHorizontal: Spacing.sm,
+                  paddingVertical: Spacing.xs,
+                  borderRadius: Spacing.borderRadius.sm,
+                  alignSelf: 'flex-start',
+                  marginLeft: Spacing.sm
+                }}>
+                  <ThemedText variant="bodySmall" style={{ fontWeight: '600', marginRight: Spacing.xs }}>
+                    {patient.last_seen_by.provider}
+                  </ThemedText>
+                  <View style={{
+                    backgroundColor: primaryColor + '20',
+                    paddingHorizontal: Spacing.xs,
+                    paddingVertical: 2,
+                    borderRadius: Spacing.borderRadius.xs,
+                    borderWidth: 1,
+                    borderColor: primaryColor + '40'
+                  }}>
+                    <ThemedText variant="labelSmall" style={{ 
+                      color: primaryColor, 
+                      fontWeight: '600',
+                      fontSize: 10
+                    }}>
+                      {patient.last_seen_by.discipline.toUpperCase()}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
+          </PalliativePatientCard>
         ))}
 
-        {/* Design System Demo */}
-        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          Design System Demo
-        </ThemedText>
-
-        <Card variant="outlined" style={{ marginBottom: Spacing.md }}>
-          <ThemedText variant="titleSmall" style={{ marginBottom: Spacing.sm }}>
-            Typography Variants
-          </ThemedText>
-          <ThemedText variant="headlineSmall" style={{ marginBottom: Spacing.xs }}>
-            Headline Small
-          </ThemedText>
-          <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.xs }}>
-            Title Medium
-          </ThemedText>
-          <ThemedText variant="bodyLarge" style={{ marginBottom: Spacing.xs }}>
-            Body Large - Main content text
-          </ThemedText>
-          <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.xs }}>
-            Body Medium - Secondary content
-          </ThemedText>
-          <ThemedText variant="labelLarge" style={{ marginBottom: Spacing.xs }}>
-            Label Large - Button text
-          </ThemedText>
-          <ThemedText medicalVariant="patientName" style={{ marginBottom: Spacing.xs }}>
-            Patient Name Style
-          </ThemedText>
-          <ThemedText medicalVariant="medicalId">
-            Medical ID: MRN-12345
-          </ThemedText>
-        </Card>
-
-        {/* Additional patient cards to show more locations */}
-        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          More Patients
-        </ThemedText>
-        
-        {SAMPLE_PATIENTS.slice(3).map((patient) => (
-          <PatientCard
-            key={patient.id}
-            patientName={patient.name}
-            patientId={patient.id}
-            location={{
-              address: patient.address,
-              coordinates: patient.coordinates
-            }}
-            priority={patient.priority}
-            onPress={() => handlePatientPress(getPatientWithNotes(patient))}
-            style={{ marginBottom: Spacing.md }}
-          >
-            <ThemedText variant="bodySmall" style={{ marginTop: Spacing.sm }}>
-              {patient.vitals}
+        {/* Show message when no patients */}
+        {!loading && patients.length === 0 && !error && (
+          <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
+            <ThemedText variant="bodyMedium" style={{ textAlign: 'center' }}>
+              No patients found. The database will be initialized with sample data automatically.
             </ThemedText>
-          </PatientCard>
-        ))}
+          </Card>
+        )}
+
+        {/* Patient Details Drawer */}
+        <PatientDetailsDrawer
+          visible={drawerVisible}
+          patient={selectedPatient}
+          onClose={handleCloseDrawer}
+          onEditNotes={handleEditNotes}
+        />
+
+        {/* Notes Editor */}
+        <FullScreenNotesEditor
+          visible={notesEditorVisible}
+          patient={editingPatient}
+          initialNotes={editingPatient ? (patientNotes[editingPatient.id] || editingPatient.notes || '') : ''}
+          onSave={handleSaveNotes}
+          onClose={handleCloseNotesEditor}
+        />
 
         {/* Final spacer */}
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
-
-      {/* Patient Details Drawer */}
-      <PatientDetailsDrawer
-        visible={drawerVisible}
-        onClose={handleCloseDrawer}
-        patient={selectedPatient}
-        onEditNotes={handleEditNotes}
-      />
-
-      {/* Full Screen Notes Editor */}
-      <FullScreenNotesEditor
-        visible={notesEditorVisible}
-        onClose={handleCloseNotesEditor}
-        onSave={handleSaveNotes}
-        patient={editingPatient}
-        initialNotes={editingPatient ? (patientNotes[editingPatient.id] || editingPatient.notes || '') : ''}
-      />
     </ThemedView>
   );
 } 

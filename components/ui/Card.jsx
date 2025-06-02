@@ -1,5 +1,5 @@
 import { useEnhancedColorScheme } from '@/components/ui/ThemeProvider';
-import { MedicalPriority, TaskStatus } from '@/constants/Colors';
+import { MedicalPriority, PalliativePriority, TaskStatus } from '@/constants/Colors';
 import { Shadows, Spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { TouchableOpacity, View } from 'react-native';
@@ -17,6 +17,7 @@ export function Card({
   style,
   contentStyle,
   headerStyle,
+  usePalliativePriority = true,
   ...props
 }) {
   const colorScheme = useEnhancedColorScheme();
@@ -39,37 +40,61 @@ export function Card({
     return isDark ? statusColors.dark : statusColors.light;
   };
 
-  // Get priority colors if specified
+  // Get priority colors if specified - now supports both systems
   const getPriorityColor = () => {
     if (!priority) return null;
-    const priorityColors = MedicalPriority[priority];
+    
+    // Use palliative priority system by default, fall back to medical priority
+    const prioritySystem = usePalliativePriority ? PalliativePriority : MedicalPriority;
+    const priorityColors = prioritySystem[priority];
+    
     if (!priorityColors) {
-      console.warn(`Unknown priority: ${priority}`);
-      return null;
+      // Try the other system if priority not found
+      const fallbackSystem = usePalliativePriority ? MedicalPriority : PalliativePriority;
+      const fallbackColors = fallbackSystem[priority];
+      
+      if (!fallbackColors) {
+        console.warn(`Unknown priority: ${priority}`);
+        return null;
+      }
+      return isDark ? fallbackColors.dark : fallbackColors.light;
     }
+    
     return isDark ? priorityColors.dark : priorityColors.light;
+  };
+
+  // Get priority background color for enhanced visual indication
+  const getPriorityBackground = () => {
+    if (!priority || !usePalliativePriority) return null;
+    
+    const priorityColors = PalliativePriority[priority];
+    if (!priorityColors || !priorityColors.background) return null;
+    
+    return isDark ? priorityColors.background.dark : priorityColors.background.light;
   };
 
   // Variant styles
   const getVariantStyles = () => {
+    const priorityBg = getPriorityBackground();
+    
     switch (variant) {
       case 'elevated':
         return {
-          backgroundColor: surfaceColor,
+          backgroundColor: priorityBg || surfaceColor,
           ...Shadows.medium,
           borderWidth: 0,
         };
       
       case 'filled':
         return {
-          backgroundColor: surfaceVariantColor,
+          backgroundColor: priorityBg || surfaceVariantColor,
           ...Shadows.none,
           borderWidth: 0,
         };
       
       case 'outlined':
         return {
-          backgroundColor: surfaceColor,
+          backgroundColor: priorityBg || surfaceColor,
           ...Shadows.none,
           borderWidth: 1,
           borderColor: outlineColor,
@@ -167,19 +192,30 @@ export function Card({
   return <CardContent {...props} />;
 }
 
-// Specialized medical card components
-export function PatientCard({
+// Enhanced Palliative Patient Card with new features
+export function PalliativePatientCard({
   patientName,
   patientId,
   location,
   priority,
+  prognosis,
+  goalsOfCare,
+  painLevel,
+  primaryCaregiver,
   onPress,
   children,
   ...props
 }) {
+  const colorScheme = useEnhancedColorScheme();
+  const isDark = colorScheme === 'dark';
+  
+  // Get priority info for display
+  const priorityInfo = PalliativePriority[priority];
+  
   return (
     <Card
       priority={priority}
+      usePalliativePriority={true}
       onPress={onPress}
       {...props}
     >
@@ -198,39 +234,145 @@ export function PatientCard({
               {patientName}
             </ThemedText>
             <ThemedText medicalVariant="medicalId">
-              ID: {patientId}
+              {patientId}
             </ThemedText>
+            
+            {/* Palliative Care Info */}
+            <View style={{ marginTop: Spacing.xs }}>
+              {priorityInfo && (
+                <ThemedText 
+                  variant="bodySmall" 
+                  style={{ 
+                    color: isDark ? priorityInfo.dark : priorityInfo.light,
+                    fontWeight: '600',
+                    marginBottom: Spacing.xs
+                  }}
+                >
+                  {priorityInfo.emoji} {priorityInfo.description}
+                </ThemedText>
+              )}
+              
+              {prognosis && (
+                <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.xs }}>
+                  Prognosis: {prognosis}
+                </ThemedText>
+              )}
+              
+              {goalsOfCare && (
+                <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.xs }}>
+                  Goals: {goalsOfCare}
+                </ThemedText>
+              )}
+              
+              {painLevel !== undefined && (
+                <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.xs }}>
+                  Current Pain: {painLevel}/10
+                </ThemedText>
+              )}
+              
+              {primaryCaregiver && (
+                <ThemedText variant="bodySmall">
+                  Caregiver: {primaryCaregiver}
+                </ThemedText>
+              )}
+            </View>
           </View>
-          {location && (
-            <View style={{ alignItems: 'flex-end' }}>
+          
+          {/* Map preview */}
+          {location && location.coordinates && (
+            <View style={{ width: 80, height: 60 }}>
               <MapPreview
-                latitude={location.coordinates?.latitude}
-                longitude={location.coordinates?.longitude}
+                latitude={location.coordinates.latitude}
+                longitude={location.coordinates.longitude}
                 address={location.address}
                 size="small"
-                style={{ marginBottom: Spacing.xs }}
               />
-              <ThemedText 
-                variant="bodySmall" 
-                style={{ 
-                  textAlign: 'right',
-                  maxWidth: 100,
-                  fontSize: 10,
-                  opacity: 0.7
-                }}
-                numberOfLines={2}
-              >
-                {location.address}
-              </ThemedText>
             </View>
           )}
         </View>
+        
+        {location && location.address && (
+          <ThemedText variant="bodySmall" style={{ 
+            fontStyle: 'italic',
+            opacity: 0.8,
+            marginTop: Spacing.xs
+          }}>
+            📍 {location.address}
+          </ThemedText>
+        )}
       </View>
+      
       {children}
     </Card>
   );
 }
 
+// Legacy PatientCard (maintained for backward compatibility)
+export function PatientCard({
+  patientName,
+  patientId,
+  location,
+  priority,
+  onPress,
+  children,
+  ...props
+}) {
+  return (
+    <Card
+      priority={priority}
+      usePalliativePriority={false} // Use legacy priority system
+      onPress={onPress}
+      {...props}
+    >
+      <View style={{ marginBottom: Spacing.sm }}>
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: Spacing.xs
+        }}>
+          <View style={{ flex: 1, marginRight: Spacing.sm }}>
+            <ThemedText 
+              medicalVariant="patientName"
+              style={{ marginBottom: Spacing.xs }}
+            >
+              {patientName}
+            </ThemedText>
+            <ThemedText medicalVariant="medicalId">
+              {patientId}
+            </ThemedText>
+          </View>
+          
+          {/* Map preview */}
+          {location && location.coordinates && (
+            <View style={{ width: 80, height: 60 }}>
+              <MapPreview
+                latitude={location.coordinates.latitude}
+                longitude={location.coordinates.longitude}
+                address={location.address}
+                size="small"
+              />
+            </View>
+          )}
+        </View>
+        
+        {location && location.address && (
+          <ThemedText variant="bodySmall" style={{ 
+            fontStyle: 'italic',
+            opacity: 0.8,
+            marginTop: Spacing.xs
+          }}>
+            📍 {location.address}
+          </ThemedText>
+        )}
+      </View>
+      
+      {children}
+    </Card>
+  );
+}
+
+// Enhanced Task Card with palliative priority support
 export function TaskCard({
   taskTitle,
   taskDescription,
@@ -238,51 +380,47 @@ export function TaskCard({
   status,
   priority,
   onPress,
+  usePalliativePriority = false,
   children,
   ...props
 }) {
-  const colorScheme = useEnhancedColorScheme();
-  const isDark = colorScheme === 'dark';
-
   return (
     <Card
       title={taskTitle}
       subtitle={taskDescription}
-      status={status}
       priority={priority}
+      status={status}
+      usePalliativePriority={usePalliativePriority}
       onPress={onPress}
       {...props}
     >
-      {dueTime && (
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: Spacing.sm 
-        }}>
-          <ThemedText medicalVariant="timestamp">
-            Due: {dueTime}
-          </ThemedText>
-          {status && (
-            <View style={{
-              paddingHorizontal: Spacing.sm,
-              paddingVertical: Spacing.xs,
-              borderRadius: Spacing.borderRadius.sm,
-              backgroundColor: TaskStatus[status]?.[isDark ? 'dark' : 'light'] + '20',
+      <View style={{ 
+        flexDirection: 'row', 
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: Spacing.sm
+      }}>
+        <ThemedText variant="bodySmall" style={{ fontWeight: '600' }}>
+          Due: {dueTime}
+        </ThemedText>
+        
+        {status && (
+          <View style={{
+            paddingHorizontal: Spacing.sm,
+            paddingVertical: Spacing.xs,
+            borderRadius: Spacing.borderRadius.sm,
+            backgroundColor: 'rgba(0,0,0,0.1)'
+          }}>
+            <ThemedText variant="labelSmall" style={{ 
+              textTransform: 'uppercase',
+              fontWeight: '600'
             }}>
-              <ThemedText 
-                variant="labelSmall"
-                style={{ 
-                  color: TaskStatus[status]?.[isDark ? 'dark' : 'light'],
-                  textTransform: 'uppercase'
-                }}
-              >
-                {status}
-              </ThemedText>
-            </View>
-          )}
-        </View>
-      )}
+              {status}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+      
       {children}
     </Card>
   );

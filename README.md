@@ -1,3 +1,49 @@
+# Delegate - Palliative Care Management App
+
+## 🚀 Quick Setup with Supabase Database
+
+Your sample patients are now connected to a real Supabase database! Here's how to get started:
+
+### 1. Set Up Database Schema
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
+2. Navigate to SQL Editor
+3. Copy and run the contents of `sql/create_patients_table.sql`
+
+### 2. Environment Setup
+Your `.env.local` file should contain:
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+### 3. Test the Connection (Optional)
+```bash
+npm install dotenv
+node test-database.js
+```
+
+### 4. Start the App
+```bash
+npm start
+```
+
+🎉 The app will automatically seed your database with 6 sample patients on first run!
+
+### 5. Access Patient List
+- Open the app and go to the "Patients" tab
+- Click "View All Patients" to see the Supabase-powered patient list
+- Features include:
+  - Real-time updates
+  - Search and filtering
+  - Full CRUD operations
+  - Responsive design
+
+For detailed documentation, see [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md).
+
+---
+
+# Original README Content
+
 # Medical Delegate 🏥
 
 A modern, comprehensive medical task delegation system built with React Native and Expo. Designed for healthcare professionals to efficiently manage and delegate medical tasks to field nurses.

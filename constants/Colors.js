@@ -164,7 +164,82 @@ export const Colors = {
 // Color scheme utilities
 export const getColorScheme = (isDark) => isDark ? Colors.dark : Colors.light;
 
-// Medical priority colors
+// Palliative Care Priority System - Specialized for end-of-life care
+export const PalliativePriority = {
+  // 🔴 Imminent: End-of-life care (hours-days)
+  imminent: {
+    light: '#B71C1C', // Deep red for urgent end-of-life care
+    dark: '#EF5350',
+    background: {
+      light: '#FFEBEE',
+      dark: '#4A1C1C'
+    },
+    description: 'End-of-life care (hours-days)',
+    emoji: '🔴'
+  },
+  
+  // 🟠 Urgent Comfort: Severe symptom management needed
+  'urgent-comfort': {
+    light: '#E65100', // Orange for urgent symptom management
+    dark: '#FF7043',
+    background: {
+      light: '#FFF3E0',
+      dark: '#4A2C1C'
+    },
+    description: 'Severe symptom management needed',
+    emoji: '🟠'
+  },
+  
+  // 🟡 Symptom Care: Regular symptom monitoring
+  'symptom-care': {
+    light: '#F57C00', // Amber for regular symptom care
+    dark: '#FFB74D',
+    background: {
+      light: '#FFF8E1',
+      dark: '#3E2723'
+    },
+    description: 'Regular symptom monitoring',
+    emoji: '🟡'
+  },
+  
+  // 🟢 Psychosocial: Emotional/spiritual support
+  psychosocial: {
+    light: '#2E7D32', // Green for emotional/spiritual care
+    dark: '#66BB6A',
+    background: {
+      light: '#E8F5E8',
+      dark: '#1B2E1B'
+    },
+    description: 'Emotional/spiritual support',
+    emoji: '🟢'
+  },
+  
+  // 🔵 Family Support: Caregiver assistance
+  'family-support': {
+    light: '#1565C0', // Blue for family support
+    dark: '#42A5F5',
+    background: {
+      light: '#E3F2FD',
+      dark: '#1A2A3A'
+    },
+    description: 'Caregiver assistance',
+    emoji: '🔵'
+  },
+  
+  // 🟣 Bereavement: Post-death family support
+  bereavement: {
+    light: '#6A1B9A', // Purple for bereavement support
+    dark: '#AB47BC',
+    background: {
+      light: '#F3E5F5',
+      dark: '#2A1A2E'
+    },
+    description: 'Post-death family support',
+    emoji: '🟣'
+  }
+};
+
+// Legacy Medical priority colors (maintained for backward compatibility)
 export const MedicalPriority = {
   critical: {
     light: '#D32F2F',
@@ -198,12 +273,93 @@ export const TaskStatus = {
     light: '#388E3C',
     dark: '#81C784'
   },
-  urgent: {
-    light: '#D32F2F',
-    dark: '#F44336'
-  },
   overdue: {
     light: '#D32F2F',
     dark: '#F44336'
+  },
+  cancelled: {
+    light: '#757575',
+    dark: '#BDBDBD'
+  }
+};
+
+// Symptom Severity Colors for ESAS and pain scales
+export const SymptomSeverity = {
+  none: {
+    light: '#4CAF50',  // Green for no symptoms
+    dark: '#81C784',
+    range: [0, 1]
+  },
+  mild: {
+    light: '#8BC34A',  // Light green for mild symptoms
+    dark: '#AED581', 
+    range: [2, 3]
+  },
+  moderate: {
+    light: '#FFC107',  // Yellow for moderate symptoms
+    dark: '#FFD54F',
+    range: [4, 6]
+  },
+  severe: {
+    light: '#FF9800',  // Orange for severe symptoms
+    dark: '#FFB74D',
+    range: [7, 8]
+  },
+  extreme: {
+    light: '#F44336',  // Red for extreme symptoms
+    dark: '#EF5350',
+    range: [9, 10]
+  }
+};
+
+// Caregiver Burden Colors
+export const CaregiverBurden = {
+  none: {
+    light: '#4CAF50',
+    dark: '#81C784'
+  },
+  low: {
+    light: '#8BC34A',
+    dark: '#AED581'
+  },
+  'low-moderate': {
+    light: '#CDDC39',
+    dark: '#DCE775'
+  },
+  moderate: {
+    light: '#FFC107',
+    dark: '#FFD54F'
+  },
+  'moderate-high': {
+    light: '#FF9800',
+    dark: '#FFB74D'
+  },
+  high: {
+    light: '#FF5722',
+    dark: '#FF7043'
+  },
+  severe: {
+    light: '#F44336',
+    dark: '#EF5350'
+  }
+};
+
+// Grief Stage Colors
+export const GriefStage = {
+  anticipatory: {
+    light: '#3F51B5',  // Indigo for anticipatory grief
+    dark: '#7986CB'
+  },
+  acute: {
+    light: '#E91E63',  // Pink for acute grief
+    dark: '#F06292'
+  },
+  complicated: {
+    light: '#9C27B0',  // Purple for complicated grief
+    dark: '#BA68C8'
+  },
+  resolved: {
+    light: '#009688',  // Teal for resolved grief
+    dark: '#4DB6AC'
   }
 }; 

@@ -1,3 +1,7 @@
+// Polyfills must be imported first
+import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
+
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -53,6 +57,7 @@ function RootLayoutContent() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="task-details/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="patients-list" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

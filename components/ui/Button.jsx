@@ -1,5 +1,5 @@
 import { useEnhancedColorScheme } from '@/components/ui/ThemeProvider';
-import { MedicalPriority } from '@/constants/Colors';
+import { MedicalPriority, PalliativePriority } from '@/constants/Colors';
 import { Shadows, Spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { ActivityIndicator, TouchableOpacity } from 'react-native';
@@ -14,6 +14,7 @@ export function Button({
   disabled = false,
   loading = false,
   icon,
+  usePalliativePriority = true,
   style,
   textStyle,
   ...props
@@ -54,10 +55,29 @@ export function Button({
 
   const currentSize = sizeConfig[size];
 
-  // Get priority colors if specified
+  // Get priority colors if specified - supports both priority systems
   const getPriorityColors = () => {
     if (!priority) return null;
-    const priorityColors = MedicalPriority[priority];
+    
+    // Use palliative priority system by default, fall back to medical priority
+    const prioritySystem = usePalliativePriority ? PalliativePriority : MedicalPriority;
+    const priorityColors = prioritySystem[priority];
+    
+    if (!priorityColors) {
+      // Try the other system if priority not found
+      const fallbackSystem = usePalliativePriority ? MedicalPriority : PalliativePriority;
+      const fallbackColors = fallbackSystem[priority];
+      
+      if (!fallbackColors) {
+        console.warn(`Unknown priority: ${priority}`);
+        return null;
+      }
+      return {
+        backgroundColor: isDark ? fallbackColors.dark : fallbackColors.light,
+        textColor: '#FFFFFF',
+      };
+    }
+    
     return {
       backgroundColor: isDark ? priorityColors.dark : priorityColors.light,
       textColor: '#FFFFFF',

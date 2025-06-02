@@ -1,3 +1,4 @@
+import { PalliativePriority, SymptomSeverity } from '@/constants/Colors';
 import { Spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import React, { useEffect, useRef, useState } from 'react';
@@ -19,9 +20,11 @@ import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '../ThemedText';
 import { ThemedView } from '../ThemedView';
+import { FamilyContactCard } from './FamilyContactCard';
+import { useEnhancedColorScheme } from './ThemeProvider';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DRAWER_HEIGHT = SCREEN_HEIGHT * 0.85; // 85% of screen height
+const DRAWER_HEIGHT = SCREEN_HEIGHT * 0.90; // Increased to 90% for more content
 const SWIPE_THRESHOLD = 50;
 
 export function PatientDetailsDrawer({ 
@@ -33,6 +36,8 @@ export function PatientDetailsDrawer({
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(DRAWER_HEIGHT)).current;
   const [savedNotes, setSavedNotes] = useState('');
+  const colorScheme = useEnhancedColorScheme();
+  const isDark = colorScheme === 'dark';
   
   const backgroundColor = useThemeColor({}, 'surface');
   const surfaceColor = useThemeColor({}, 'surfaceVariant');
@@ -217,6 +222,18 @@ export function PatientDetailsDrawer({
     longitudeDelta: 0.01,
   };
 
+  // Get priority info for display
+  const priorityInfo = PalliativePriority[patient.priority];
+
+  // Get pain color for symptom display
+  const getPainColor = (painLevel) => {
+    if (painLevel === 0) return SymptomSeverity.none[isDark ? 'dark' : 'light'];
+    if (painLevel <= 3) return SymptomSeverity.mild[isDark ? 'dark' : 'light'];
+    if (painLevel <= 6) return SymptomSeverity.moderate[isDark ? 'dark' : 'light'];
+    if (painLevel <= 8) return SymptomSeverity.severe[isDark ? 'dark' : 'light'];
+    return SymptomSeverity.extreme[isDark ? 'dark' : 'light'];
+  };
+
   return (
     <Modal
       visible={visible}
@@ -241,6 +258,7 @@ export function PatientDetailsDrawer({
             backgroundColor,
             transform: [{ translateY }],
             paddingBottom: insets.bottom,
+            height: DRAWER_HEIGHT,
           },
         ]}
       >
@@ -257,6 +275,28 @@ export function PatientDetailsDrawer({
             <ThemedText variant="bodyMedium" style={{ color: onSurfaceColor, opacity: 0.7 }}>
               {patient.id}
             </ThemedText>
+            
+            {/* Priority Badge */}
+            {priorityInfo && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: Spacing.sm,
+                paddingHorizontal: Spacing.md,
+                paddingVertical: Spacing.sm,
+                borderRadius: Spacing.borderRadius.md,
+                backgroundColor: (isDark ? priorityInfo.dark : priorityInfo.light) + '20',
+                borderWidth: 1,
+                borderColor: isDark ? priorityInfo.dark : priorityInfo.light,
+              }}>
+                <ThemedText variant="bodyMedium" style={{
+                  color: isDark ? priorityInfo.dark : priorityInfo.light,
+                  fontWeight: '600'
+                }}>
+                  {priorityInfo.emoji} {priorityInfo.description}
+                </ThemedText>
+              </View>
+            )}
           </View>
         </View>
 
@@ -303,7 +343,7 @@ export function PatientDetailsDrawer({
             </MapView>
           </View>
 
-          {/* Patient Information */}
+          {/* Basic Patient Information */}
           <View style={styles.infoContainer}>
             <ThemedView 
               style={[
@@ -315,14 +355,14 @@ export function PatientDetailsDrawer({
                 Patient Information
               </ThemedText>
               
-              {/* First Row: Age | Condition */}
+              {/* Basic Info Grid */}
               <View style={styles.infoGrid}>
                 <View style={styles.infoField}>
                   <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
                     Age
                   </ThemedText>
                   <ThemedText variant="titleMedium" style={styles.fieldValue}>
-                    {patient.age}
+                    {patient.age || 'N/A'}
                   </ThemedText>
                 </View>
                 <View style={styles.infoField}>
@@ -335,36 +375,6 @@ export function PatientDetailsDrawer({
                 </View>
               </View>
 
-              {/* Second Row: Priority | Status */}
-              <View style={styles.infoGrid}>
-                <View style={styles.infoField}>
-                  <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
-                    Priority
-                  </ThemedText>
-                  <ThemedText 
-                    variant="titleMedium" 
-                    style={[
-                      styles.fieldValue,
-                      { 
-                        textTransform: 'capitalize',
-                        fontWeight: '600'
-                      }
-                    ]}
-                  >
-                    {patient.priority}
-                  </ThemedText>
-                </View>
-                <View style={styles.infoField}>
-                  <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
-                    Status
-                  </ThemedText>
-                  <ThemedText variant="bodyMedium" style={styles.fieldValue}>
-                    {patient.vitals}
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Third Row: Last Visit | Next Appointment */}
               <View style={styles.infoGrid}>
                 <View style={styles.infoField}>
                   <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
@@ -383,10 +393,235 @@ export function PatientDetailsDrawer({
                   </ThemedText>
                 </View>
               </View>
+
+              {/* Current Status */}
+              <View style={styles.infoField}>
+                <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
+                  Current Status
+                </ThemedText>
+                <ThemedText variant="bodyMedium" style={styles.fieldValue}>
+                  {patient.vitals}
+                </ThemedText>
+              </View>
             </ThemedView>
           </View>
 
-          {/* Notes Section - Now touchable to open full screen editor */}
+          {/* Palliative Care Information */}
+          {patient.palliativeCare && (
+            <View style={styles.infoContainer}>
+              <ThemedView 
+                style={[
+                  styles.infoCard, 
+                  { backgroundColor: surfaceColor, borderColor: outlineColor }
+                ]}
+              >
+                <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+                  🏥 Palliative Care Plan
+                </ThemedText>
+                
+                <View style={styles.infoGrid}>
+                  <View style={styles.infoField}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
+                      Prognosis
+                    </ThemedText>
+                    <ThemedText variant="titleMedium" style={styles.fieldValue}>
+                      {patient.palliativeCare.prognosis}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.infoField}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
+                      Goals of Care
+                    </ThemedText>
+                    <ThemedText variant="titleMedium" style={styles.fieldValue}>
+                      {patient.palliativeCare.goalsOfCare}
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <View style={styles.infoGrid}>
+                  <View style={styles.infoField}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
+                      Preferred Care Location
+                    </ThemedText>
+                    <ThemedText variant="bodyMedium" style={styles.fieldValue}>
+                      {patient.palliativeCare.preferredPlaceOfCare}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.infoField}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
+                      Preferred Death Location
+                    </ThemedText>
+                    <ThemedText variant="bodyMedium" style={styles.fieldValue}>
+                      {patient.palliativeCare.preferredPlaceOfDeath}
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Advance Directives */}
+                {patient.palliativeCare.advanceDirectives && (
+                  <View style={{ marginTop: Spacing.md }}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7, marginBottom: Spacing.sm }]}>
+                      Advance Directives
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                      {patient.palliativeCare.advanceDirectives.dnr && (
+                        <View style={[styles.directiveBadge, { backgroundColor: '#FF5722' + '20', borderColor: '#FF5722' }]}>
+                          <ThemedText variant="bodySmall" style={{ color: '#FF5722', fontWeight: '600' }}>
+                            DNR
+                          </ThemedText>
+                        </View>
+                      )}
+                      {patient.palliativeCare.advanceDirectives.dni && (
+                        <View style={[styles.directiveBadge, { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' }]}>
+                          <ThemedText variant="bodySmall" style={{ color: '#FF9800', fontWeight: '600' }}>
+                            DNI
+                          </ThemedText>
+                        </View>
+                      )}
+                      {patient.palliativeCare.advanceDirectives.POLST && (
+                        <View style={[styles.directiveBadge, { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' }]}>
+                          <ThemedText variant="bodySmall" style={{ color: '#2196F3', fontWeight: '600' }}>
+                            POLST
+                          </ThemedText>
+                        </View>
+                      )}
+                      {patient.palliativeCare.advanceDirectives.polst && (
+                        <View style={[styles.directiveBadge, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}>
+                          <ThemedText variant="bodySmall" style={{ color: '#4CAF50', fontWeight: '600' }}>
+                            POLST
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Spiritual and Cultural Needs */}
+                {patient.palliativeCare.spiritualNeeds && (
+                  <View style={{ marginTop: Spacing.md }}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7 }]}>
+                      Spiritual & Cultural Considerations
+                    </ThemedText>
+                    <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.xs }}>
+                      Religion: {patient.palliativeCare.spiritualNeeds.religion}
+                    </ThemedText>
+                    {patient.palliativeCare.spiritualNeeds.spiritualConcerns && (
+                      <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.xs, fontStyle: 'italic' }}>
+                        &ldquo;{patient.palliativeCare.spiritualNeeds.spiritualConcerns}&rdquo;
+                      </ThemedText>
+                    )}
+                  </View>
+                )}
+              </ThemedView>
+            </View>
+          )}
+
+          {/* Current Symptoms & Pain Assessment */}
+          {patient.symptoms && (
+            <View style={styles.infoContainer}>
+              <ThemedView 
+                style={[
+                  styles.infoCard, 
+                  { backgroundColor: surfaceColor, borderColor: outlineColor }
+                ]}
+              >
+                <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+                  🩺 Current Symptoms
+                </ThemedText>
+
+                {/* Pain Scale Display */}
+                {patient.symptoms.painScale !== undefined && (
+                  <View style={{ marginBottom: Spacing.md }}>
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: Spacing.sm,
+                    }}>
+                      <View style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: getPainColor(patient.symptoms.painScale),
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: Spacing.sm,
+                      }}>
+                        <ThemedText variant="titleMedium" style={{ color: '#FFFFFF', fontWeight: 'bold' }}>
+                          {patient.symptoms.painScale}
+                        </ThemedText>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText variant="titleSmall">
+                          Pain Level: {patient.symptoms.painScale}/10
+                        </ThemedText>
+                        <ThemedText variant="bodySmall" style={{ opacity: 0.8 }}>
+                          Last assessed: {patient.symptoms.lastAssessment}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Current Symptoms List */}
+                {patient.symptoms.current && patient.symptoms.current.length > 0 && (
+                  <View style={{ marginBottom: Spacing.md }}>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7, marginBottom: Spacing.sm }]}>
+                      Active Symptoms
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                      {patient.symptoms.current.map((symptom, index) => (
+                        <View key={index} style={[styles.symptomBadge, { backgroundColor: primaryColor + '20', borderColor: primaryColor }]}>
+                          <ThemedText variant="bodySmall" style={{ color: primaryColor, fontWeight: '600' }}>
+                            {symptom.charAt(0).toUpperCase() + symptom.slice(1).replace('-', ' ')}
+                          </ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* ESAS Scores */}
+                {patient.symptoms.esasScore && (
+                  <View>
+                    <ThemedText variant="labelSmall" style={[styles.fieldLabel, { opacity: 0.7, marginBottom: Spacing.sm }]}>
+                      ESAS Assessment (Last: {patient.symptoms.esasScore.lastUpdated})
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                      {Object.entries(patient.symptoms.esasScore).map(([key, value]) => {
+                        if (key === 'lastUpdated') return null;
+                        return (
+                          <View key={key} style={styles.esasItem}>
+                            <ThemedText variant="bodySmall" style={{ opacity: 0.8, textTransform: 'capitalize' }}>
+                              {key.replace(/([A-Z])/g, ' $1').trim()}
+                            </ThemedText>
+                            <ThemedText variant="titleSmall" style={{ fontWeight: '600' }}>
+                              {value}/10
+                            </ThemedText>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </ThemedView>
+            </View>
+          )}
+
+          {/* Family & Caregivers */}
+          {patient.family && (
+            <View style={styles.infoContainer}>
+              <FamilyContactCard
+                primaryCaregiver={patient.family.primaryCaregiver}
+                emergencyContacts={patient.family.emergencyContacts}
+                caregiverBurden={patient.family.caregiverBurden}
+                grief={patient.family.grief}
+                familyDynamics={patient.family.familyDynamics}
+                bereavementSupport={patient.family.bereavementSupport}
+              />
+            </View>
+          )}
+
+          {/* Notes Section */}
           <View style={styles.notesContainer}>
             <ThemedView 
               style={[
@@ -483,7 +718,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: DRAWER_HEIGHT,
     borderTopLeftRadius: Spacing.borderRadius.lg,
     borderTopRightRadius: Spacing.borderRadius.lg,
     paddingTop: Spacing.sm,
@@ -524,7 +758,7 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.borderRadius.md,
     borderWidth: 1,
     overflow: 'hidden',
-    height: SCREEN_HEIGHT * 0.3, // Restored to original size
+    height: SCREEN_HEIGHT * 0.25, // Reduced to make room for more content
   },
   map: {
     flex: 1,
@@ -552,6 +786,25 @@ const styles = StyleSheet.create({
   },
   fieldValue: {
     // No need for flex: 1 here since these are text components
+  },
+  directiveBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Spacing.borderRadius.sm,
+    borderWidth: 1,
+  },
+  symptomBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Spacing.borderRadius.sm,
+    borderWidth: 1,
+  },
+  esasItem: {
+    alignItems: 'center',
+    minWidth: 60,
+    padding: Spacing.sm,
+    borderRadius: Spacing.borderRadius.sm,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   notesContainer: {
     paddingHorizontal: Spacing.md,
