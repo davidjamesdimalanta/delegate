@@ -26,7 +26,15 @@ export function HelloWave() {
 
   return (
     <Animated.View style={animatedStyle}>
-      <ThemedText style={styles.text}>👋</ThemedText>
+      <ThemedText 
+        style={styles.text}
+        lightColor="#1C1B1F"
+        darkColor="#E6E1E5"
+        variant="headlineLarge"
+        medicalVariant={null}
+      >
+        👋
+      </ThemedText>
     </Animated.View>
   );
 }

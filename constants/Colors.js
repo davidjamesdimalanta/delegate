@@ -20,7 +20,6 @@ const warningDark = '#FFB74D';
 
 // Success colors for completed tasks
 const successLight = '#388E3C';
-const successDark = '#4CAF50';
 
 // Surface colors for cards and containers
 const surfaceLight = '#FFFFFF';

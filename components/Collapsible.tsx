@@ -12,7 +12,16 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
   const theme = useEnhancedColorScheme() ?? 'light';
 
   return (
-    <ThemedView>
+    <ThemedView
+      style={{}}
+      lightColor={Colors.light.surface}
+      darkColor={Colors.dark.surface}
+      spacing="sm"
+      padding="md"
+      margin="none"
+      elevation="level1"
+      borderRadius="md"
+    >
       <TouchableOpacity
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
@@ -25,9 +34,31 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
           style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
         />
 
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
+        <ThemedText 
+          type="defaultSemiBold"
+          style={{}}
+          lightColor={Colors.light.onSurface}
+          darkColor={Colors.dark.onSurface}
+          variant="titleMedium"
+          medicalVariant={null}
+        >
+          {title}
+        </ThemedText>
       </TouchableOpacity>
-      {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
+      {isOpen && (
+        <ThemedView 
+          style={styles.content}
+          lightColor="transparent"
+          darkColor="transparent"
+          spacing="none"
+          padding="none"
+          margin="sm"
+          elevation="none"
+          borderRadius="none"
+        >
+          {children}
+        </ThemedView>
+      )}
     </ThemedView>
   );
 }
