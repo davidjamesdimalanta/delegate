@@ -237,13 +237,18 @@ export function usePatients(): UsePatients {
 }
 
 // Hook for getting a single patient
-export function usePatient(id: string) {
+export function usePatient(id: string | null) {
   const [patient, setPatient] = useState<Patient | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchPatient = useCallback(async () => {
-    if (!id) return
+    if (!id || id.trim() === '') {
+      setLoading(false)
+      setPatient(null)
+      setError(null)
+      return
+    }
 
     try {
       setLoading(true)

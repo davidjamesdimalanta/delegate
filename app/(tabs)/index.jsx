@@ -1,13 +1,13 @@
 import {
-  Button,
-  Card,
-  FullScreenNotesEditor,
-  PalliativePatientCard,
-  PatientDetailsDrawer,
-  Spacing,
-  ThemedText,
-  ThemedView,
-  ThemeToggleButton
+    Button,
+    Card,
+    FullScreenNotesEditor,
+    PalliativePatientCard,
+    PatientDetailsDrawer,
+    Spacing,
+    ThemedText,
+    ThemedView,
+    ThemeToggleButton
 } from '@/components/ui';
 import { usePatients } from '@/hooks/usePatients';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -115,7 +115,10 @@ export default function MedicalDashboard() {
 
       <ScrollView 
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: Spacing.md }}
+        contentContainerStyle={{ 
+          padding: Spacing.md,
+          paddingBottom: insets.bottom + 90 // Tab bar height + extra padding
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* Welcome Section */}
@@ -280,9 +283,6 @@ export default function MedicalDashboard() {
           onSave={handleSaveNotes}
           onClose={handleCloseNotesEditor}
         />
-
-        {/* Final spacer */}
-        <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </ThemedView>
   );

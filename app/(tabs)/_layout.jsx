@@ -27,11 +27,28 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
+        name="visits"
+        options={{
+          title: 'Visits',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? "medical" : "medical-outline"} 
+              size={24} 
+              color={color} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="tasks"
         options={{
           title: 'Tasks',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="clipboard" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? "clipboard" : "clipboard-outline"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
@@ -39,8 +56,12 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Patients',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? "people" : "people-outline"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
@@ -48,8 +69,12 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="settings" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? "settings" : "settings-outline"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />

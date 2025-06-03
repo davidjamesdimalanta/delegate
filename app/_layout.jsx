@@ -57,6 +57,14 @@ function RootLayoutContent() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="task-details/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment/vitals" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment/pain" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment/medications" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment/interventions" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment/family" options={{ headerShown: false }} />
+        <Stack.Screen name="visit-details/[id]/assessment/notes" options={{ headerShown: false }} />
         <Stack.Screen name="patients-list" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>

@@ -1,9 +1,9 @@
 import {
-    Card,
-    Spacing,
-    ThemedText,
-    ThemedView,
-    ThemeSettings
+  Card,
+  Spacing,
+  ThemedText,
+  ThemedView,
+  ThemeSettings
 } from '@/components/ui';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +27,10 @@ export default function SettingsScreen() {
 
       <ScrollView 
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: Spacing.md }}
+        contentContainerStyle={{ 
+          padding: Spacing.md,
+          paddingBottom: insets.bottom + 90 // Tab bar height + extra padding
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* Theme Settings Card */}
@@ -151,9 +154,6 @@ export default function SettingsScreen() {
             </ThemedView>
           </ThemedView>
         </Card>
-
-        {/* Bottom spacing */}
-        <ThemedView style={{ height: Spacing.xl }} />
       </ScrollView>
     </ThemedView>
   );

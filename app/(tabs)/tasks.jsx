@@ -1,15 +1,15 @@
 import {
-  Spacing,
-  TaskCard,
-  ThemedText,
-  ThemedView,
-  ThemeToggleButton
+    Spacing,
+    TaskCard,
+    ThemedText,
+    ThemedView,
+    ThemeToggleButton
 } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
 import { debugTasksTable } from '@/lib/database';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TasksPage() {
@@ -102,7 +102,10 @@ export default function TasksPage() {
 
       <ScrollView 
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: Spacing.md }}
+        contentContainerStyle={{ 
+          padding: Spacing.md,
+          paddingBottom: insets.bottom + 90 // Tab bar height + extra padding
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -160,9 +163,6 @@ export default function TasksPage() {
             />
           ))
         )}
-
-        {/* Final spacer */}
-        <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </ThemedView>
   );

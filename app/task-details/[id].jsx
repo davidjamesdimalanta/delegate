@@ -1,16 +1,13 @@
 import {
-  Button,
-  FamilySupportCompact,
-  FullScreenNotesEditor,
-  GoalsOfCareCompact,
-  PatientCard,
-  PatientDetailsDrawer,
-  Spacing,
-  SymptomAssessmentCompact,
-  TaskCard,
-  ThemedText,
-  ThemedView,
-  ThemeToggleButton
+    Button,
+    FullScreenNotesEditor,
+    PatientCard,
+    PatientDetailsDrawer,
+    Spacing,
+    TaskCard,
+    ThemedText,
+    ThemedView,
+    ThemeToggleButton
 } from '@/components/ui';
 import { usePatient } from '@/hooks/usePatients';
 import { useTask } from '@/hooks/useTasks';
@@ -228,28 +225,26 @@ export default function TaskDetailsPage() {
   return (
     <ThemedView style={{ flex: 1 }}>
       {/* Header */}
-      <ThemedView 
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: Spacing.md,
-          paddingTop: insets.top + Spacing.md,
-        }}
-      >
+      <ThemedView style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingTop: insets.top + Spacing.sm,
+        paddingBottom: Spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: outlineColor,
+      }}>
         <TouchableOpacity 
           onPress={() => router.back()}
-          style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            flex: 1 
-          }}
+          style={{ marginRight: Spacing.md }}
         >
-          <Ionicons name="arrow-back" size={24} color="#666" />
-          <ThemedText variant="headlineMedium" style={{ marginLeft: Spacing.sm }}>
-            Task Details
-          </ThemedText>
+          <Ionicons name="arrow-back" size={24} color={onSurfaceColor} />
         </TouchableOpacity>
+        
+        <ThemedText variant="titleLarge" style={{ flex: 1 }}>
+          Task Details
+        </ThemedText>
+        
         <ThemeToggleButton />
       </ThemedView>
 
@@ -298,35 +293,7 @@ export default function TaskDetailsPage() {
               Care Assessment & Planning
             </ThemedText>
             
-            {/* Symptom Assessment Section */}
-            <SymptomAssessmentCompact
-              patient={patient}
-              onPress={() => {
-                console.log('Navigate to symptom assessment page');
-                router.push(`/task-details/${id}/symptom-assessment`);
-              }}
-              style={{ marginBottom: Spacing.md }}
-            />
-
-            {/* Family Support Section */}
-            <FamilySupportCompact
-              patient={patient}
-              onPress={() => {
-                console.log('Navigate to family support page');
-                router.push(`/task-details/${id}/family-support`);
-              }}
-              style={{ marginBottom: Spacing.md }}
-            />
-
-            {/* Goals of Care Section */}
-            <GoalsOfCareCompact
-              patient={patient}
-              onPress={() => {
-                console.log('Navigate to goals of care page');
-                router.push(`/task-details/${id}/goals-of-care`);
-              }}
-              style={{ marginBottom: Spacing.md }}
-            />
+            {/* Removed the assessment components as these will be part of the visit assessment flow */}
           </View>
         )}
 
