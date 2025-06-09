@@ -2,7 +2,7 @@
 // Run with: node test-database.js
 
 import { createClient } from '@supabase/supabase-js'
-import { SAMPLE_PATIENTS } from './constants/SamplePatients.js'
+import { SAMPLE_PATIENTS } from '../constants/SamplePatients.js'
 
 // Load environment variables
 import 'dotenv/config'

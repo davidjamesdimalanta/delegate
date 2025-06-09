@@ -1,15 +1,23 @@
+import AIScribeDemo from '@/components/ai-scribe/AIScribeDemo';
 import {
-  Card,
-  Spacing,
-  ThemedText,
-  ThemedView,
-  ThemeSettings
+    Card,
+    Spacing,
+    ThemedText,
+    ThemedView,
+    ThemeSettings
 } from '@/components/ui';
-import { ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const [showAIScribe, setShowAIScribe] = useState(false);
+
+  if (showAIScribe) {
+    return <AIScribeDemo />;
+  }
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -35,7 +43,42 @@ export default function SettingsScreen() {
       >
         {/* Theme Settings Card */}
         <Card variant="elevated" style={{ marginBottom: Spacing.lg }}>
-          <ThemeSettings />
+          <ThemeSettings style={{}} />
+        </Card>
+
+        {/* AI Scribe Demo Card */}
+        <Card variant="elevated" style={{ marginBottom: Spacing.lg }}>
+          <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+            🤖 AI Clinical Scribe
+          </ThemedText>
+          <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.sm }}>
+            Voice-powered clinical documentation system for hospice and palliative care.
+          </ThemedText>
+          <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.md, opacity: 0.7 }}>
+            Features: Speech-to-text transcription, automated SOAP note generation, and medical entity extraction.
+          </ThemedText>
+          
+          <Pressable
+            onPress={() => setShowAIScribe(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#007bff',
+              paddingVertical: Spacing.sm,
+              paddingHorizontal: Spacing.md,
+              borderRadius: Spacing.borderRadius.md,
+              marginTop: Spacing.sm
+            }}
+          >
+            <Ionicons name="mic" size={20} color="white" style={{ marginRight: Spacing.xs }} />
+            <ThemedText 
+              variant="labelLarge" 
+              style={{ color: 'white', fontWeight: '600' }}
+            >
+              Try AI Scribe Demo
+            </ThemedText>
+          </Pressable>
         </Card>
 
         {/* App Information */}

@@ -2,9 +2,9 @@
 ## Medical Delegate Application with AI Scribe
 
 **Document Version:** 1.0  
-**Date:** December 2024  
+**Date:** June 2025
 **Project:** Medical Delegate - Hospice Care Management System  
-**Prepared by:** Development Team  
+**Prepared by:** David James Dimalanta
 
 ---
 
@@ -465,8 +465,8 @@ Medium
 
 **Document Control:**
 - **Version**: 1.0
-- **Last Updated**: December 2024
-- **Next Review**: March 2025
+- **Last Updated**: June 2025
+- **Next Review**: September 2025
 - **Approved By**: [To be filled]
 - **Distribution**: Development Team, Stakeholders, Compliance Officer
 

@@ -8,7 +8,7 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { useEnhancedColorScheme } from '@/components/ui/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 
-export default function TabLayout() {
+export default function TabLayout(): React.JSX.Element {
   const colorScheme = useEnhancedColorScheme();
 
   return (
