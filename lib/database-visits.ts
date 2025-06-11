@@ -1,12 +1,12 @@
-import { supabase } from './supabase-minimal';
+import { supabase } from './supabase';
 import {
-    EnhancedPatient,
-    NursingIntervention,
-    NursingMetricsResponse,
-    Visit,
-    VisitResponse,
-    VisitsResponse,
-    VitalSigns
+  EnhancedPatient,
+  NursingIntervention,
+  NursingMetricsResponse,
+  Visit,
+  VisitResponse,
+  VisitsResponse,
+  VitalSigns
 } from './types/nursing-types';
 
 // Enhanced Database Types for Visits
@@ -762,57 +762,44 @@ export async function migrateTasksToVisits(): Promise<{ data: any; error: any }>
 
 /**
  * Subscribe to visit changes for real-time updates
- * Note: Real-time is currently disabled in this Supabase configuration
  */
 export function subscribeToVisits(callback: (visits: Visit[]) => void) {
-  console.log('⚠️  Real-time subscriptions are disabled in current Supabase configuration');
-  console.log('📝 To enable real-time features, update lib/supabase.ts to enable realtime');
+  console.log('🔄 Setting up real-time visits subscription');
   
-  // Return a mock subscription object that matches the expected interface
-  return {
-    unsubscribe: () => {
-      console.log('🔕 Mock subscription unsubscribed');
-    }
-  };
-  
-  // TODO: Uncomment when real-time is enabled in supabase.ts
-  /*
   const subscription = supabase
     .channel('visits-changes')
     .on('postgres_changes', 
       { event: '*', schema: 'public', table: 'visits' }, 
       async (payload: { eventType: string; new: any; old: any; errors: any }) => {
-        console.log('Visit change detected:', payload);
+        console.log('🏥 Visit change detected:', payload.eventType);
+        
         // Refresh all visits when any change occurs
-        const { data } = await getAllVisits();
-        if (data) {
-          callback(data);
+        try {
+          const { data } = await getAllVisits();
+          if (data) {
+            callback(data);
+          }
+        } catch (error) {
+          console.error('❌ Error refreshing visits after change:', error);
         }
       }
     )
-    .subscribe();
+    .subscribe((status: string) => {
+      console.log('📡 Visits subscription status:', status);
+    });
 
-  return subscription;
-  */
+  return () => {
+    console.log('🔕 Unsubscribing from visits changes');
+    supabase.removeChannel(subscription);
+  };
 }
 
 /**
  * Subscribe to nursing interventions for a specific visit
- * Note: Real-time is currently disabled in this Supabase configuration
  */
 export function subscribeToNursingInterventions(visitId: string, callback: (interventions: NursingIntervention[]) => void) {
-  console.log('⚠️  Real-time subscriptions are disabled in current Supabase configuration');
-  console.log('📝 To enable real-time features, update lib/supabase.ts to enable realtime');
+  console.log('🔄 Setting up real-time nursing interventions subscription for visit:', visitId);
   
-  // Return a mock subscription object that matches the expected interface
-  return {
-    unsubscribe: () => {
-      console.log('🔕 Mock subscription unsubscribed');
-    }
-  };
-  
-  // TODO: Uncomment when real-time is enabled in supabase.ts
-  /*
   const subscription = supabase
     .channel(`nursing-interventions-${visitId}`)
     .on('postgres_changes',
@@ -823,17 +810,26 @@ export function subscribeToNursingInterventions(visitId: string, callback: (inte
         filter: `visit_id=eq.${visitId}`
       },
       async (payload: { eventType: string; new: any; old: any; errors: any }) => {
-        console.log('Nursing intervention change detected:', payload);
-        const { data } = await getNursingInterventions(visitId);
-        if (data) {
-          callback(data);
+        console.log('💉 Nursing intervention change detected:', payload.eventType);
+        
+        try {
+          const { data } = await getNursingInterventions(visitId);
+          if (data) {
+            callback(data);
+          }
+        } catch (error) {
+          console.error('❌ Error refreshing nursing interventions after change:', error);
         }
       }
     )
-    .subscribe();
+    .subscribe((status: string) => {
+      console.log('📡 Nursing interventions subscription status:', status);
+    });
 
-  return subscription;
-  */
+  return () => {
+    console.log('🔕 Unsubscribing from nursing interventions changes');
+    supabase.removeChannel(subscription);
+  };
 }
 
 // =============================================================================

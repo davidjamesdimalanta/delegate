@@ -1,21 +1,13 @@
-import {
-  Button,
-  FullScreenNotesEditor,
-  PatientCard,
-  PatientDetailsDrawer,
-  Spacing,
-  ThemedText,
-  ThemedView,
-  ThemeToggleButton,
-  VisitCard
-} from '@/components/ui';
+import AIScribeInterface from '@/components/ai-scribe/AIScribeInterface';
+import { PatientCard, PatientDetailsDrawer, ThemedText, ThemedView, ThemeToggleButton, VisitCard } from '@/components/ui';
 import { usePatient } from '@/hooks/usePatients';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useVisit } from '@/hooks/useVisits';
+import { createClinicalNote } from '@/lib/database-clinical-notes';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VisitDetailsPage() {
@@ -23,27 +15,18 @@ export default function VisitDetailsPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   
+  const [aiScribeVisible, setAiScribeVisible] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [notesEditorVisible, setNotesEditorVisible] = useState(false);
-  const [editingVisit, setEditingVisit] = useState(null);
-  const [visitNotes, setVisitNotes] = useState({});
-  const [visitStatuses, setVisitStatuses] = useState({}); // Track visit status changes
-  const [activeTab, setActiveTab] = useState('overview'); // Track active nursing tab
 
   // Theme colors
-  const surfaceColor = useThemeColor({}, 'surface');
   const outlineColor = useThemeColor({}, 'outline');
   const onSurfaceColor = useThemeColor({}, 'onSurface');
   const primaryColor = useThemeColor({}, 'primary');
-  const successColor = useThemeColor({}, 'success');
-  const warningColor = useThemeColor({}, 'warning');
+  const surfaceColor = useThemeColor({}, 'surface');
 
   // Get the visit from database
   const { visit, loading, error } = useVisit(id);
-  
-  // Get current visit status (from local state or original visit)
-  const currentStatus = visitStatuses[id] || visit?.status || 'scheduled';
   
   // Get the related patient from database - only if we have a visit with a patient ID
   const { patient, loading: patientLoading, error: patientError } = usePatient(
@@ -54,7 +37,7 @@ export default function VisitDetailsPage() {
     return (
       <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
-        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+        <ThemedText variant="bodyMedium" style={{ marginTop: 16 }}>
           Loading visit data...
         </ThemedText>
       </ThemedView>
@@ -65,14 +48,21 @@ export default function VisitDetailsPage() {
     return (
       <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ThemedText variant="titleLarge">Visit not found</ThemedText>
-        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm, textAlign: 'center' }}>
+        <ThemedText variant="bodyMedium" style={{ marginTop: 16, textAlign: 'center' }}>
           {error || 'Unable to load visit data'}
         </ThemedText>
-        <Button 
-          title="Go Back" 
-          onPress={() => router.back()} 
-          style={{ marginTop: Spacing.md }}
-        />
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={{
+            backgroundColor: primaryColor,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: 8,
+            marginTop: 16
+          }}
+        >
+          <ThemedText style={{ color: 'white', fontWeight: '600' }}>Go Back</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     );
   }
@@ -82,7 +72,7 @@ export default function VisitDetailsPage() {
     return (
       <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
-        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+        <ThemedText variant="bodyMedium" style={{ marginTop: 16 }}>
           Loading patient data...
         </ThemedText>
       </ThemedView>
@@ -94,14 +84,21 @@ export default function VisitDetailsPage() {
     return (
       <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ThemedText variant="titleLarge">Patient not found</ThemedText>
-        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm, textAlign: 'center' }}>
+        <ThemedText variant="bodyMedium" style={{ marginTop: 16, textAlign: 'center' }}>
           {patientError || 'Unable to load patient data for this visit'}
         </ThemedText>
-        <Button 
-          title="Go Back" 
-          onPress={() => router.back()} 
-          style={{ marginTop: Spacing.md }}
-        />
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={{
+            backgroundColor: primaryColor,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: 8,
+            marginTop: 16
+          }}
+        >
+          <ThemedText style={{ color: 'white', fontWeight: '600' }}>Go Back</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     );
   }
@@ -118,379 +115,60 @@ export default function VisitDetailsPage() {
     setTimeout(() => setSelectedPatient(null), 300);
   };
 
-  const handleEditNotes = () => {
-    setEditingVisit(visit);
-    setNotesEditorVisible(true);
+  const handleBeginVisit = () => {
+    setAiScribeVisible(true);
   };
 
-  const handleSaveNotes = (notes) => {
-    if (editingVisit) {
-      setVisitNotes(prev => ({
-        ...prev,
-        [editingVisit.id]: notes
-      }));
-      // TODO: Update visit notes in database
-    }
+  const handleAiScribeClose = () => {
+    setAiScribeVisible(false);
   };
 
-  const handleStartVisit = () => {
-    console.log(`Starting visit ${visit.id}`);
-    // Update visit status to in-progress
-    setVisitStatuses(prev => ({
-      ...prev,
-      [visit.id]: 'in-progress'
-    }));
+  const handleNoteSaved = async (note, transcription) => {
+    console.log('Clinical note saved:', note);
+    console.log('Original transcription:', transcription);
     
-    // Navigate to the assessment flow
-    router.push(`/visit-details/${visit.id}/assessment`);
-  };
+    try {
+      if (!visit?.id || !patient?.id) {
+        throw new Error('Missing visit or patient ID');
+      }
 
-  const handleCompleteVisit = () => {
-    console.log(`Completing visit ${visit.id}`);
-    // Update visit status to completed
-    setVisitStatuses(prev => ({
-      ...prev,
-      [visit.id]: 'completed'
-    }));
-    
-    // TODO: Update visit status in database and record completion time
-    
-    // Show brief feedback before navigating back
-    setTimeout(() => {
-      router.back();
-    }, 500);
-  };
+      // Save the clinical note to the database
+      const { data, error } = await createClinicalNote(
+        visit.id,
+        patient.id,
+        note,
+        transcription,
+        undefined // No user ID until auth is implemented
+      );
 
-  const handleToggleProgress = () => {
-    let newStatus;
-    
-    switch (currentStatus) {
-      case 'scheduled':
-        newStatus = 'in-progress';
-        break;
-      case 'in-progress':
-        newStatus = 'scheduled';
-        break;
-      case 'completed':
-        newStatus = 'scheduled'; // Reopen visit
-        break;
-      default:
-        newStatus = 'in-progress';
-    }
-    
-    console.log(`Changing visit ${visit.id} status from ${currentStatus} to: ${newStatus}`);
-    setVisitStatuses(prev => ({
-      ...prev,
-      [visit.id]: newStatus
-    }));
-    
-    // TODO: Update visit status in database
-  };
+      if (error) {
+        throw new Error(error.message || 'Failed to save clinical note');
+      }
 
-  const getSecondaryButtonContent = () => {
-    switch (currentStatus) {
-      case 'scheduled':
-        return (
-          <View style={{ alignItems: 'center' }}>
-            <ThemedText variant="labelMedium" style={{ textAlign: 'center' }}>
-              Mark as
-            </ThemedText>
-            <ThemedText variant="labelLarge" style={{ fontWeight: '700', textAlign: 'center' }}>
-              In Progress
-            </ThemedText>
-          </View>
-        );
-      case 'in-progress':
-        return (
-          <View style={{ alignItems: 'center' }}>
-            <ThemedText variant="labelMedium" style={{ textAlign: 'center' }}>
-              Mark as
-            </ThemedText>
-            <ThemedText variant="labelLarge" style={{ fontWeight: '700', textAlign: 'center' }}>
-              Scheduled
-            </ThemedText>
-          </View>
-        );
-      case 'completed':
-        return (
-          <View style={{ alignItems: 'center' }}>
-            <ThemedText variant="labelMedium" style={{ textAlign: 'center' }}>
-              Reopen
-            </ThemedText>
-            <ThemedText variant="labelLarge" style={{ fontWeight: '700', textAlign: 'center' }}>
-              Visit
-            </ThemedText>
-          </View>
-        );
-      default:
-        return (
-          <View style={{ alignItems: 'center' }}>
-            <ThemedText variant="labelLarge" style={{ fontWeight: '700', textAlign: 'center' }}>
-              Update Status
-            </ThemedText>
-          </View>
-        );
-    }
-  };
-
-  const getCurrentNotes = () => {
-    return visitNotes[visit.id] || visit.visitNotes || '';
-  };
-
-  // Format visit time
-  const formatTime = (timestamp) => {
-    if (!timestamp) return 'Not set';
-    return new Date(timestamp).toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  // Nursing assessment tabs
-  const nursingTabs = [
-    { id: 'overview', label: 'Overview', icon: 'medical' },
-    { id: 'vitals', label: 'Vitals', icon: 'pulse' },
-    { id: 'pain', label: 'Pain', icon: 'medical-outline' },
-    { id: 'meds', label: 'Medications', icon: 'medical' },
-    { id: 'interventions', label: 'Interventions', icon: 'heart' },
-    { id: 'family', label: 'Family', icon: 'people' },
-  ];
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <View>
-            {/* Visit Status and Timing */}
-            <View style={{ 
-              backgroundColor: surfaceColor,
-              padding: Spacing.md,
-              borderRadius: Spacing.borderRadius.md,
-              marginBottom: Spacing.md,
-              borderWidth: 1,
-              borderColor: outlineColor
-            }}>
-              <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.sm }}>
-                Visit Information
-              </ThemedText>
-              
-              <View style={{ marginBottom: Spacing.sm }}>
-                <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: Spacing.xs }}>
-                  Scheduled Time
-                </ThemedText>
-                <ThemedText variant="bodyMedium">
-                  {formatTime(visit.scheduledTime)}
-                </ThemedText>
-              </View>
-
-              {visit.actualStartTime && (
-                <View style={{ marginBottom: Spacing.sm }}>
-                  <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: Spacing.xs }}>
-                    Started
-                  </ThemedText>
-                  <ThemedText variant="bodyMedium">
-                    {formatTime(visit.actualStartTime)}
-                  </ThemedText>
-                </View>
-              )}
-
-              {visit.actualEndTime && (
-                <View style={{ marginBottom: Spacing.sm }}>
-                  <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: Spacing.xs }}>
-                    Completed
-                  </ThemedText>
-                  <ThemedText variant="bodyMedium">
-                    {formatTime(visit.actualEndTime)}
-                  </ThemedText>
-                </View>
-              )}
-
-              <View>
-                <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: Spacing.xs }}>
-                  Visit Type
-                </ThemedText>
-                <ThemedText variant="bodyMedium" style={{ textTransform: 'capitalize' }}>
-                  {visit.visitType.replace('-', ' ')}
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* Assessment Summary */}
-            <View style={{ 
-              backgroundColor: surfaceColor,
-              padding: Spacing.md,
-              borderRadius: Spacing.borderRadius.md,
-              marginBottom: Spacing.md,
-              borderWidth: 1,
-              borderColor: outlineColor
-            }}>
-              <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.sm }}>
-                Assessment Summary
-              </ThemedText>
-
-              {/* Quick Stats */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {visit.vitalSigns && (
-                  <View style={{ 
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    padding: Spacing.sm,
-                    borderRadius: Spacing.borderRadius.sm,
-                    marginRight: Spacing.sm,
-                    marginBottom: Spacing.sm,
-                    minWidth: 80
-                  }}>
-                    <Ionicons name="pulse" size={16} color={successColor} />
-                    <ThemedText variant="labelSmall" style={{ marginTop: Spacing.xs }}>
-                      Vitals Recorded
-                    </ThemedText>
-                  </View>
-                )}
-
-                {visit.painAssessment && (
-                  <View style={{ 
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    padding: Spacing.sm,
-                    borderRadius: Spacing.borderRadius.sm,
-                    marginRight: Spacing.sm,
-                    marginBottom: Spacing.sm,
-                    minWidth: 80
-                  }}>
-                    <Ionicons name="medical" size={16} color={warningColor} />
-                    <ThemedText variant="labelSmall" style={{ marginTop: Spacing.xs }}>
-                      Pain: {visit.painAssessment.currentPainLevel}/10
-                    </ThemedText>
-                  </View>
-                )}
-
-                {visit.medicationsAdministered && visit.medicationsAdministered.length > 0 && (
-                  <View style={{ 
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    padding: Spacing.sm,
-                    borderRadius: Spacing.borderRadius.sm,
-                    marginRight: Spacing.sm,
-                    marginBottom: Spacing.sm,
-                    minWidth: 80
-                  }}>
-                    <Ionicons name="medical-outline" size={16} color={primaryColor} />
-                    <ThemedText variant="labelSmall" style={{ marginTop: Spacing.xs }}>
-                      {visit.medicationsAdministered.length} Meds
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
-
-              {/* Notes Preview */}
-              {getCurrentNotes() && (
-                <View style={{ marginTop: Spacing.md }}>
-                  <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: Spacing.xs }}>
-                    Visit Notes
-                  </ThemedText>
-                  <ThemedText variant="bodyMedium" style={{ fontStyle: 'italic' }}>
-                    {getCurrentNotes().substring(0, 150)}{getCurrentNotes().length > 150 ? '...' : ''}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-          </View>
-        );
+      Alert.alert(
+        'Note Saved',
+        'Clinical note has been saved to the patient record.',
+        [{ text: 'OK' }]
+      );
       
-      case 'vitals':
-        return (
-          <View style={{ 
-            backgroundColor: surfaceColor,
-            padding: Spacing.md,
-            borderRadius: Spacing.borderRadius.md,
-            marginBottom: Spacing.md,
-            borderWidth: 1,
-            borderColor: outlineColor
-          }}>
-            <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.sm }}>
-              Vital Signs
-            </ThemedText>
-            
-            {visit.vitalSigns ? (
-              <View>
-                {visit.vitalSigns.temperature && (
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                    <ThemedText variant="bodyMedium">Temperature</ThemedText>
-                    <ThemedText variant="bodyMedium">
-                      {visit.vitalSigns.temperature.value}°{visit.vitalSigns.temperature.unit}
-                    </ThemedText>
-                  </View>
-                )}
-                
-                {visit.vitalSigns.bloodPressure && (
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                    <ThemedText variant="bodyMedium">Blood Pressure</ThemedText>
-                    <ThemedText variant="bodyMedium">
-                      {visit.vitalSigns.bloodPressure.systolic}/{visit.vitalSigns.bloodPressure.diastolic}
-                    </ThemedText>
-                  </View>
-                )}
-                
-                {visit.vitalSigns.heartRate && (
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                    <ThemedText variant="bodyMedium">Heart Rate</ThemedText>
-                    <ThemedText variant="bodyMedium">
-                      {visit.vitalSigns.heartRate.value} bpm
-                    </ThemedText>
-                  </View>
-                )}
-                
-                {visit.vitalSigns.painLevel !== undefined && (
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                    <ThemedText variant="bodyMedium">Pain Level</ThemedText>
-                    <ThemedText variant="bodyMedium">
-                      {visit.vitalSigns.painLevel}/10
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <View style={{ alignItems: 'center', padding: Spacing.lg }}>
-                <Ionicons name="pulse-outline" size={48} color={outlineColor} />
-                <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.md, textAlign: 'center' }}>
-                  No vital signs recorded yet
-                </ThemedText>
-                <Button
-                  title="Record Vital Signs"
-                  onPress={() => {
-                    // TODO: Navigate to vital signs entry form
-                    console.log('Navigate to vital signs entry');
-                  }}
-                  style={{ marginTop: Spacing.md }}
-                />
-              </View>
-            )}
-          </View>
-        );
-      
-      default:
-        return (
-          <View style={{ 
-            backgroundColor: surfaceColor,
-            padding: Spacing.md,
-            borderRadius: Spacing.borderRadius.md,
-            marginBottom: Spacing.md,
-            borderWidth: 1,
-            borderColor: outlineColor,
-            alignItems: 'center'
-          }}>
-            <Ionicons name="construct-outline" size={48} color={outlineColor} />
-            <ThemedText variant="titleMedium" style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>
-              Coming Soon
-            </ThemedText>
-            <ThemedText variant="bodyMedium" style={{ textAlign: 'center' }}>
-              This nursing assessment feature is being developed.
-            </ThemedText>
-          </View>
-        );
+      console.log('✅ Clinical note saved to database:', data);
+    } catch (error) {
+      console.error('❌ Error saving clinical note:', error);
+      Alert.alert(
+        'Save Failed',
+        `Failed to save clinical note: ${error.message}`,
+        [{ text: 'OK' }]
+      );
     }
   };
+
+  const patientContext = patient ? {
+    id: patient.id,
+    name: patient.name,
+    condition: patient.primaryDiagnosis || patient.condition || 'General care',
+    currentSymptoms: patient.currentSymptoms || [],
+    medications: patient.medications || []
+  } : undefined;
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -498,15 +176,15 @@ export default function VisitDetailsPage() {
       <ThemedView style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.md,
-        paddingTop: insets.top + Spacing.sm,
-        paddingBottom: Spacing.sm,
+        paddingHorizontal: 16,
+        paddingTop: insets.top + 8,
+        paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: outlineColor,
       }}>
         <TouchableOpacity 
           onPress={() => router.back()}
-          style={{ marginRight: Spacing.md }}
+          style={{ marginRight: 16 }}
         >
           <Ionicons name="arrow-back" size={24} color={onSurfaceColor} />
         </TouchableOpacity>
@@ -518,9 +196,10 @@ export default function VisitDetailsPage() {
         <ThemeToggleButton />
       </ThemedView>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.md }}>
-        {/* Patient Information */}
-        <TouchableOpacity onPress={handlePatientPress} style={{ marginBottom: Spacing.md }}>
+      {/* Main Content */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+        {/* Patient Card */}
+        <TouchableOpacity onPress={handlePatientPress} style={{ marginBottom: 24 }}>
           <PatientCard
             patientName={patient.name}
             patientId={patient.id}
@@ -532,119 +211,160 @@ export default function VisitDetailsPage() {
           />
         </TouchableOpacity>
 
-        {/* Visit Card */}
-        <VisitCard
-          visit={{ ...visit, status: currentStatus }}
-          style={{ marginBottom: Spacing.md }}
-        />
-
-        {/* Nursing Assessment Tabs */}
-        <View style={{ marginBottom: Spacing.md }}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: Spacing.md }}
-          >
-            {nursingTabs.map((tab) => (
-              <TouchableOpacity
-                key={tab.id}
-                onPress={() => setActiveTab(tab.id)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: Spacing.md,
-                  paddingVertical: Spacing.sm,
-                  marginRight: Spacing.sm,
-                  borderRadius: Spacing.borderRadius.md,
-                  backgroundColor: activeTab === tab.id ? primaryColor : surfaceColor,
-                  borderWidth: 1,
-                  borderColor: activeTab === tab.id ? primaryColor : outlineColor,
-                }}
-              >
-                <Ionicons 
-                  name={tab.icon} 
-                  size={16} 
-                  color={activeTab === tab.id ? 'white' : onSurfaceColor} 
-                  style={{ marginRight: Spacing.xs }}
-                />
-                <ThemedText 
-                  variant="labelMedium" 
-                  style={{ 
-                    color: activeTab === tab.id ? 'white' : onSurfaceColor,
-                    fontWeight: activeTab === tab.id ? '600' : '400'
-                  }}
-                >
-                  {tab.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Tab Content */}
-          {renderTabContent()}
+        {/* Expanded Visit Details Card */}
+        <View style={{ marginBottom: 24 }}>
+          <VisitCard visit={visit} />
         </View>
 
-        {/* Existing Palliative Care Components */}
-        {/* Removed the three compact components as these will be part of the visit assessment flow */}
+        {/* Visit Information Section */}
+        <View style={{
+          backgroundColor: surfaceColor,
+          padding: 16,
+          borderRadius: 12,
+          marginBottom: 24,
+          borderWidth: 1,
+          borderColor: outlineColor
+        }}>
+          <ThemedText variant="titleMedium" style={{ marginBottom: 16 }}>
+            📋 Visit Information
+          </ThemedText>
+          
+          {/* Scheduled Time */}
+          <View style={{ marginBottom: 12 }}>
+            <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: 4 }}>
+              Scheduled Time
+            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="time-outline" size={16} color={onSurfaceColor} style={{ marginRight: 8 }} />
+              <ThemedText variant="bodyMedium">
+                {visit.scheduledTime ? new Date(visit.scheduledTime).toLocaleString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                }) : 'Not scheduled'}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Visit Type */}
+          <View style={{ marginBottom: 12 }}>
+            <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: 4 }}>
+              Visit Type
+            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="medical-outline" size={16} color={onSurfaceColor} style={{ marginRight: 8 }} />
+              <ThemedText variant="bodyMedium" style={{ textTransform: 'capitalize' }}>
+                {visit.visitType ? visit.visitType.replace('-', ' ') : 'Standard visit'}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Status */}
+          <View style={{ marginBottom: 12 }}>
+            <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: 4 }}>
+              Status
+            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons 
+                name={visit.status === 'scheduled' ? 'time-outline' : 
+                      visit.status === 'in-progress' ? 'play-circle' : 
+                      visit.status === 'completed' ? 'checkmark-circle' : 'alert-circle'} 
+                size={16} 
+                color={visit.status === 'completed' ? '#10B981' : 
+                       visit.status === 'in-progress' ? '#F59E0B' : 
+                       visit.status === 'scheduled' ? '#6B7280' : '#EF4444'} 
+                style={{ marginRight: 8 }} 
+              />
+              <ThemedText variant="bodyMedium" style={{ textTransform: 'capitalize' }}>
+                {visit.status || 'Scheduled'}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Duration */}
+          {visit.estimatedDurationMinutes && (
+            <View style={{ marginBottom: 12 }}>
+              <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: 4 }}>
+                Estimated Duration
+              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="hourglass-outline" size={16} color={onSurfaceColor} style={{ marginRight: 8 }} />
+                <ThemedText variant="bodyMedium">
+                  {visit.estimatedDurationMinutes} minutes
+                </ThemedText>
+              </View>
+            </View>
+          )}
+
+          {/* Assigned Nurse */}
+          {visit.assignedNurse && (
+            <View style={{ marginBottom: 12 }}>
+              <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: 4 }}>
+                Assigned Nurse
+              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="person-outline" size={16} color={onSurfaceColor} style={{ marginRight: 8 }} />
+                <ThemedText variant="bodyMedium">
+                  {visit.assignedNurse}
+                </ThemedText>
+              </View>
+            </View>
+          )}
+
+          {/* Visit Notes Preview */}
+          {visit.visitNotes && (
+            <View>
+              <ThemedText variant="bodySmall" style={{ opacity: 0.7, marginBottom: 4 }}>
+                Notes
+              </ThemedText>
+              <View style={{ 
+                backgroundColor: 'rgba(0,0,0,0.05)', 
+                padding: 12, 
+                borderRadius: 8, 
+                borderLeftWidth: 3, 
+                borderLeftColor: primaryColor 
+              }}>
+                <ThemedText variant="bodyMedium" style={{ fontStyle: 'italic' }}>
+                  &quot;{visit.visitNotes.substring(0, 200)}{visit.visitNotes.length > 200 ? '...' : ''}&quot;
+                </ThemedText>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Begin Visit Button */}
+        <TouchableOpacity
+          onPress={handleBeginVisit}
+          style={{
+            backgroundColor: primaryColor,
+            paddingVertical: 20,
+            paddingHorizontal: 32,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+            marginBottom: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="medical" size={24} color="white" style={{ marginRight: 12 }} />
+            <ThemedText style={{ 
+              color: 'white', 
+              fontSize: 18, 
+              fontWeight: '600' 
+            }}>
+              Begin Visit
+            </ThemedText>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
-
-      {/* Action Buttons */}
-      <ThemedView style={{
-        flexDirection: 'row',
-        padding: Spacing.md,
-        paddingBottom: insets.bottom + Spacing.md,
-        borderTopWidth: 1,
-        borderTopColor: outlineColor,
-        gap: Spacing.sm,
-      }}>
-        <TouchableOpacity
-          onPress={handleToggleProgress}
-          style={{
-            flex: 1,
-            backgroundColor: surfaceColor,
-            borderWidth: 1,
-            borderColor: outlineColor,
-            borderRadius: Spacing.borderRadius.lg,
-            paddingHorizontal: 24,
-            paddingVertical: 12,
-            minHeight: 40,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          {getSecondaryButtonContent()}
-        </TouchableOpacity>
-
-        {currentStatus === 'scheduled' && (
-          <Button
-            title="Start Visit"
-            onPress={handleStartVisit}
-            style={{ flex: 1 }}
-          />
-        )}
-
-        {currentStatus === 'in-progress' && (
-          <Button
-            title="Complete Visit"
-            onPress={handleCompleteVisit}
-            style={{ flex: 1 }}
-          />
-        )}
-
-        <TouchableOpacity
-          onPress={handleEditNotes}
-          style={{
-            padding: Spacing.md,
-            borderRadius: Spacing.borderRadius.md,
-            borderWidth: 1,
-            borderColor: outlineColor,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="create-outline" size={20} color={onSurfaceColor} />
-        </TouchableOpacity>
-      </ThemedView>
 
       {/* Patient Details Drawer */}
       <PatientDetailsDrawer
@@ -653,13 +373,14 @@ export default function VisitDetailsPage() {
         patient={selectedPatient}
       />
 
-      {/* Notes Editor */}
-      <FullScreenNotesEditor
-        visible={notesEditorVisible}
-        onClose={() => setNotesEditorVisible(false)}
-        onSave={handleSaveNotes}
-        initialNotes={getCurrentNotes()}
-        title={`Visit Notes - ${patient?.name}`}
+      {/* AI Scribe Interface */}
+      <AIScribeInterface
+        isVisible={aiScribeVisible}
+        onClose={handleAiScribeClose}
+        onNoteSaved={handleNoteSaved}
+        patientContext={patientContext}
+        visitId={visit?.id}
+        currentUserId={undefined} // No user ID until auth is implemented
       />
     </ThemedView>
   );

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, SafeAreaView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, Text, View } from 'react-native';
 import { ClinicalNote } from '../../lib/ai/openai-client';
+import { createClinicalNote } from '../../lib/database-clinical-notes';
 import ClinicalNoteGenerator from './ClinicalNoteGenerator';
 import SpeechRecognitionButton from './SpeechRecognitionButton';
 
@@ -17,6 +18,7 @@ interface AIScribeInterfaceProps {
     medications?: string[];
   };
   visitId?: string;
+  currentUserId?: string;
 }
 
 interface WorkflowStep {
@@ -53,12 +55,15 @@ export default function AIScribeInterface({
   onClose,
   onNoteSaved,
   patientContext,
-  visitId
+  visitId,
+  currentUserId
 }: AIScribeInterfaceProps) {
   const [currentStep, setCurrentStep] = useState<WorkflowStep['step']>('recording');
   const [transcribedText, setTranscribedText] = useState<string>('');
   const [generatedNote, setGeneratedNote] = useState<ClinicalNote | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
   const handleTranscriptionUpdate = (text: string) => {
     console.log('📝 Transcription update:', text);
@@ -83,27 +88,117 @@ export default function AIScribeInterface({
     Alert.alert('AI Scribe Error', error);
   };
 
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     if (!generatedNote || !transcribedText) {
       Alert.alert('Error', 'No clinical note to save');
       return;
     }
 
-    Alert.alert(
-      'Save Clinical Note',
-      'Save this clinical note to the patient record?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: () => {
-            onNoteSaved?.(generatedNote, transcribedText);
-            resetWorkflow();
-            onClose();
+    if (!visitId || !patientContext?.id) {
+      Alert.alert('Error', 'Missing visit or patient information');
+      return;
+    }
+
+    // Validate the clinical note before saving
+    const validation = validateClinicalNote(generatedNote);
+    if (!validation.isValid) {
+      Alert.alert(
+        'Incomplete Clinical Note',
+        `The following sections need attention:\n\n${validation.missingFields.join('\n')}\n\nWould you like to save anyway?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Save Anyway', onPress: () => proceedWithSave() }
+        ]
+      );
+      return;
+    }
+
+    await proceedWithSave();
+  };
+
+  const proceedWithSave = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      // Save to database using the clinical notes handler
+      const { data, error } = await createClinicalNote(
+        visitId!,
+        patientContext!.id,
+        generatedNote!,
+        transcribedText,
+        currentUserId // Pass undefined if no user ID available
+      );
+
+      if (error) {
+        throw new Error(error.message || 'Failed to save clinical note');
+      }
+
+      console.log('✅ Clinical note saved to database:', data);
+      
+      // Call the parent callback if provided
+      onNoteSaved?.(generatedNote!, transcribedText);
+      
+      setSaveSuccess(true);
+      
+      // Show success message and close after a brief delay
+      Alert.alert(
+        'Success',
+        'Clinical note has been saved to the patient record.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              resetWorkflow();
+              onClose();
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+
+    } catch (error) {
+      console.error('❌ Error saving clinical note:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      setErrors(prev => [...prev, `Save failed: ${errorMessage}`]);
+      
+      Alert.alert(
+        'Save Failed',
+        `Failed to save clinical note: ${errorMessage}`,
+        [
+          { text: 'OK' },
+          {
+            text: 'Try Again',
+            onPress: () => handleSaveNote()
+          }
+        ]
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Helper function to validate clinical note (basic validation)
+  const validateClinicalNote = (note: ClinicalNote) => {
+    const missingFields: string[] = [];
+    
+    if (!note.soap?.subjective || note.soap.subjective.length < 10) {
+      missingFields.push('• Subjective findings');
+    }
+    if (!note.soap?.objective || note.soap.objective.length < 10) {
+      missingFields.push('• Objective findings');
+    }
+    if (!note.soap?.assessment || note.soap.assessment.length < 10) {
+      missingFields.push('• Assessment');
+    }
+    if (!note.soap?.plan || note.soap.plan.length < 10) {
+      missingFields.push('• Plan');
+    }
+    
+    return {
+      isValid: missingFields.length === 0,
+      missingFields
+    };
   };
 
   const resetWorkflow = () => {
@@ -111,9 +206,16 @@ export default function AIScribeInterface({
     setTranscribedText('');
     setGeneratedNote(null);
     setErrors([]);
+    setIsSaving(false);
+    setSaveSuccess(false);
   };
 
   const handleClose = () => {
+    if (isSaving) {
+      Alert.alert('Please Wait', 'Clinical note is being saved. Please wait before closing.');
+      return;
+    }
+
     if (transcribedText || generatedNote) {
       Alert.alert(
         'Discard Changes',
@@ -364,8 +466,9 @@ export default function AIScribeInterface({
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Pressable
                 onPress={resetWorkflow}
+                disabled={isSaving}
                 style={{
-                  backgroundColor: '#6c757d',
+                  backgroundColor: isSaving ? '#6c757d80' : '#6c757d',
                   paddingHorizontal: 20,
                   paddingVertical: 12,
                   borderRadius: 8,
@@ -381,8 +484,9 @@ export default function AIScribeInterface({
 
               <Pressable
                 onPress={handleSaveNote}
+                disabled={isSaving || saveSuccess}
                 style={{
-                  backgroundColor: '#28a745',
+                  backgroundColor: saveSuccess ? '#28a745' : (isSaving ? '#007bff80' : '#28a745'),
                   paddingHorizontal: 20,
                   paddingVertical: 12,
                   borderRadius: 8,
@@ -390,12 +494,59 @@ export default function AIScribeInterface({
                   alignItems: 'center'
                 }}
               >
-                <Ionicons name="save" size={16} color="white" />
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : saveSuccess ? (
+                  <Ionicons name="checkmark" size={16} color="white" />
+                ) : (
+                  <Ionicons name="save" size={16} color="white" />
+                )}
                 <Text style={{ color: 'white', marginLeft: 8, fontWeight: '600' }}>
-                  Save to Record
+                  {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save to Record'}
                 </Text>
               </Pressable>
             </View>
+            
+            {/* Save Status Indicator */}
+            {(isSaving || saveSuccess) && (
+              <View style={{
+                marginTop: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {isSaving && (
+                  <>
+                    <ActivityIndicator size="small" color="#007bff" />
+                    <Text style={{ marginLeft: 8, color: '#007bff', fontSize: 14 }}>
+                      Saving clinical note to database...
+                    </Text>
+                  </>
+                )}
+                {saveSuccess && (
+                  <>
+                    <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+                    <Text style={{ marginLeft: 8, color: '#28a745', fontSize: 14 }}>
+                      Clinical note saved successfully!
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Database Status Indicator */}
+        {visitId && patientContext && (
+          <View style={{
+            padding: 8,
+            backgroundColor: '#e8f5e8',
+            borderTopWidth: 1,
+            borderTopColor: '#28a745'
+          }}>
+            <Text style={{ fontSize: 12, color: '#155724', textAlign: 'center' }}>
+              Connected to database • Visit: {visitId.slice(0, 8)}... • Patient: {patientContext.name}
+            </Text>
           </View>
         )}
       </SafeAreaView>

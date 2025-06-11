@@ -17,10 +17,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
-  // Completely disable realtime to prevent WebSocket imports
+  // Enable realtime with optimized settings for React Native
   realtime: {
     params: {
-      eventsPerSecond: 0,
+      eventsPerSecond: 10, // Reasonable rate limiting
     },
   },
   global: {
@@ -30,10 +30,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// Disable all realtime functionality
-if (supabase.realtime) {
-  supabase.realtime.disconnect()
-}
+// Note: Realtime is now enabled for WebSocket-based real-time subscriptions
+// The WebSocket service handles connection management independently
+console.log('✅ Supabase client initialized with realtime enabled');
 
 // Tells Supabase Auth to continuously refresh the session automatically
 // if the app is in the foreground. When this is added, you will continue

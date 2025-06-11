@@ -1,4 +1,4 @@
-import AIScribeDemo from '@/components/ai-scribe/AIScribeDemo';
+import ClinicalNotesDemo from '@/components/demo/ClinicalNotesDemo';
 import {
     Card,
     Spacing,
@@ -13,10 +13,44 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const [showAIScribe, setShowAIScribe] = useState(false);
+  const [showClinicalNotes, setShowClinicalNotes] = useState(false);
 
-  if (showAIScribe) {
-    return <AIScribeDemo />;
+  if (showClinicalNotes) {
+    return (
+      <ThemedView style={{ flex: 1 }}>
+        {/* Header with Back Button */}
+        <ThemedView 
+          style={{
+            padding: Spacing.md,
+            paddingTop: insets.top + Spacing.md,
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderBottomWidth: 1,
+            borderBottomColor: '#e9ecef',
+          }}
+        >
+          <Pressable
+            onPress={() => setShowClinicalNotes(false)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: Spacing.xs,
+              marginRight: Spacing.sm,
+            }}
+          >
+            <Ionicons name="arrow-back" size={24} color="#007bff" />
+          </Pressable>
+          <ThemedText variant="headlineMedium">
+            Clinical Notes Demo
+          </ThemedText>
+        </ThemedView>
+        
+        {/* Clinical Notes Demo Content */}
+        <ThemedView style={{ flex: 1 }}>
+          <ClinicalNotesDemo patientId="MRN-24680" />
+        </ThemedView>
+      </ThemedView>
+    );
   }
 
   return (
@@ -46,20 +80,20 @@ export default function SettingsScreen() {
           <ThemeSettings style={{}} />
         </Card>
 
-        {/* AI Scribe Demo Card */}
+        {/* Clinical Notes Demo Card */}
         <Card variant="elevated" style={{ marginBottom: Spacing.lg }}>
           <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-            🤖 AI Clinical Scribe
+            📋 Clinical Notes
           </ThemedText>
           <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.sm }}>
-            Voice-powered clinical documentation system for hospice and palliative care.
+            View and manage clinical documentation for hospice and palliative care patients.
           </ThemedText>
           <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.md, opacity: 0.7 }}>
-            Features: Speech-to-text transcription, automated SOAP note generation, and medical entity extraction.
+            Features: SOAP note display, visit summaries, note status tracking, and AI-generated clinical documentation.
           </ThemedText>
           
           <Pressable
-            onPress={() => setShowAIScribe(true)}
+            onPress={() => setShowClinicalNotes(true)}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -71,12 +105,12 @@ export default function SettingsScreen() {
               marginTop: Spacing.sm
             }}
           >
-            <Ionicons name="mic" size={20} color="white" style={{ marginRight: Spacing.xs }} />
+            <Ionicons name="document-text" size={20} color="white" style={{ marginRight: Spacing.xs }} />
             <ThemedText 
               variant="labelLarge" 
               style={{ color: 'white', fontWeight: '600' }}
             >
-              Try AI Scribe Demo
+              View Clinical Notes
             </ThemedText>
           </Pressable>
         </Card>

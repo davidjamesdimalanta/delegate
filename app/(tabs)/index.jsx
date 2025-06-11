@@ -1,99 +1,92 @@
 import {
-    Button,
-    Card,
-    FullScreenNotesEditor,
-    PalliativePatientCard,
-    PatientDetailsDrawer,
     Spacing,
     ThemedText,
     ThemedView,
-    ThemeToggleButton
+    ThemeToggleButton,
+    VisitCard
 } from '@/components/ui';
-import { usePatients } from '@/hooks/usePatients';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { useVisits } from '@/hooks/useVisits';
+import { debugVisitsTable } from '@/lib/database-visits';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function MedicalDashboard() {
+export default function VisitsPage() {
   const insets = useSafeAreaInsets();
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [notesEditorVisible, setNotesEditorVisible] = useState(false);
-  const [editingPatient, setEditingPatient] = useState(null);
-  const [patientNotes, setPatientNotes] = useState({});
+  const router = useRouter();
+  const { visits, loading, error, refreshVisits } = useVisits();
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Get patient data from database
-  const { patients, loading, error, refreshPatients } = usePatients();
+  // Debug logging
+  useEffect(() => {
+    console.log('=== VISITS PAGE DEBUG ===');
+    console.log('Visits array:', visits);
+    console.log('Visits length:', visits.length);
+    console.log('Loading:', loading);
+    console.log('Error:', error);
+    console.log('========================');
+  }, [visits, loading, error]);
 
-  // Get theme colors
-  const primaryColor = useThemeColor({}, 'primary');
+  // Add this useEffect to run debugging on mount
+  useEffect(() => {
+    console.log('📱 VisitsPage: Component mounted, running debugVisitsTable...');
+    debugVisitsTable();
+  }, []);
 
-  const handlePatientPress = (patient) => {
-    setSelectedPatient(patient);
-    setDrawerVisible(true);
+  const handleVisitPress = (visitId) => {
+    console.log(`Visit pressed: ${visitId}`);
+    router.push(`/visit-details/${visitId}`);
   };
 
-  const handleCloseDrawer = () => {
-    setDrawerVisible(false);
-    // Small delay to avoid visual glitch when closing
-    setTimeout(() => setSelectedPatient(null), 300);
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh button pressed...');
+    setRefreshing(true);
+    await refreshVisits();
+    setRefreshing(false);
+    console.log('✅ Manual refresh completed');
   };
 
-  const handleEditNotes = (patient, currentNotes) => {
-    // Ensure we have a valid patient before proceeding
-    if (!patient) {
-      console.error('No patient provided to handleEditNotes');
-      return;
-    }
-    
-    // Close the drawer first
-    setDrawerVisible(false);
-    
-    // Set the editing patient immediately
-    setEditingPatient(patient);
-    
-    // Open the notes editor after a short delay to ensure drawer is closed
-    setTimeout(() => {
-      setNotesEditorVisible(true);
-    }, 100);
-  };
+  // Separate visits by status for better organization
+  const scheduledVisits = visits.filter(visit => visit.status === 'scheduled');
+  const inProgressVisits = visits.filter(visit => visit.status === 'in-progress');
+  const completedVisits = visits.filter(visit => visit.status === 'completed');
+  const urgentVisits = visits.filter(visit => 
+    visit.priority === 'imminent' || visit.priority === 'urgent-comfort'
+  );
 
-  const handleSaveNotes = (notes) => {
-    if (editingPatient) {
-      setPatientNotes(prev => ({
-        ...prev,
-        [editingPatient.id]: notes
-      }));
-      
-      // Update the selected patient if it's the same one being edited
-      if (selectedPatient && selectedPatient.id === editingPatient.id) {
-        setSelectedPatient(prev => ({
-          ...prev,
-          notes: notes
-        }));
-      }
-    }
-  };
+  console.log('Scheduled visits:', scheduledVisits.length);
+  console.log('In progress visits:', inProgressVisits.length);
+  console.log('Completed visits:', completedVisits.length);
+  console.log('Urgent visits:', urgentVisits.length);
 
-  const handleCloseNotesEditor = () => {
-    setNotesEditorVisible(false);
-    
-    // Reopen the drawer if we still have a selected patient
-    setTimeout(() => {
-      if (selectedPatient || editingPatient) {
-        setDrawerVisible(true);
-      }
-      setEditingPatient(null);
-    }, 100);
-  };
+  if (loading && visits.length === 0) {
+    console.log('Showing loading state');
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+        <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
+          Loading visits...
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
-  // Get patient with updated notes
-  const getPatientWithNotes = (patient) => ({
-    ...patient,
-    notes: patientNotes[patient.id] || patient.notes || ''
-  });
+  if (error) {
+    console.log('Showing error state:', error);
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.md }}>
+        <ThemedText variant="titleLarge" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
+          Error Loading Visits
+        </ThemedText>
+        <ThemedText variant="bodyMedium" style={{ textAlign: 'center' }}>
+          {error}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  console.log('Rendering main visits view');
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -108,7 +101,7 @@ export default function MedicalDashboard() {
         }}
       >
         <ThemedText variant="headlineMedium">
-          Palliative Care Dashboard
+          Nursing Visits
         </ThemedText>
         <ThemeToggleButton />
       </ThemedView>
@@ -120,169 +113,148 @@ export default function MedicalDashboard() {
           paddingBottom: insets.bottom + 90 // Tab bar height + extra padding
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
-        {/* Welcome Section */}
-        <Card variant="elevated" style={{ marginBottom: Spacing.lg }}>
-          <ThemedText variant="titleLarge" style={{ marginBottom: Spacing.sm }}>
-            Patient Care Coordination
-          </ThemedText>
-          <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.md }}>
-            Comprehensive palliative care management including symptom assessment, family support, and interdisciplinary coordination.
-          </ThemedText>
-          <Button 
-            title="View All Patients" 
-            variant="filled" 
-            onPress={() => router.push('/patients-list')}
-          />
-        </Card>
-
-        {/* Quick Actions */}
-        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          Quick Actions
+        {/* Debug Info */}
+        <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.md, opacity: 0.7 }}>
+          Debug: {visits.length} total visits | Loading: {loading.toString()} | Error: {error || 'none'}
         </ThemedText>
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-between',
-          marginBottom: Spacing.lg 
-        }}>
-          <Button 
-            title="Symptom Assessment" 
-            variant="filled" 
-            priority="symptom-care"
-            size="small"
-            style={{ flex: 1, marginRight: Spacing.xs }}
-            onPress={() => console.log('Start symptom assessment')}
-          />
-          <Button 
-            title="Family Support" 
-            variant="outlined" 
-            priority="family-support"
-            size="small"
-            style={{ flex: 1, marginHorizontal: Spacing.xs }}
-            onPress={() => console.log('View family support')}
-          />
-          <Button 
-            title="Team Notes" 
-            variant="text" 
-            size="small"
-            style={{ flex: 1, marginLeft: Spacing.xs }}
-            onPress={() => console.log('View team notes')}
-          />
-        </View>
 
-        {/* Patient Cards */}
-        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
-          Current Patients
-        </ThemedText>
-        
-        {/* Show loading indicator */}
-        {loading && patients.length === 0 && (
-          <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
-            <ActivityIndicator size="large" color={primaryColor} />
-            <ThemedText variant="bodyMedium" style={{ marginTop: Spacing.sm }}>
-              Loading patients...
+        {/* Urgent/Priority Visits Section */}
+        {urgentVisits.length > 0 && (
+          <>
+            <ThemedText variant="titleMedium" style={{ 
+              marginBottom: Spacing.md,
+              color: '#EF4444' // Red color for urgent
+            }}>
+              🚨 Urgent Visits ({urgentVisits.length})
             </ThemedText>
+
+            {urgentVisits.map((visit) => (
+              <VisitCard
+                key={visit.id}
+                visit={visit}
+                onPress={() => handleVisitPress(visit.id)}
+                style={{ marginBottom: Spacing.md }}
+              />
+            ))}
+
+            <View style={{ height: Spacing.lg }} />
+          </>
+        )}
+
+        {/* In Progress Visits */}
+        {inProgressVisits.length > 0 && (
+          <>
+            <ThemedText variant="titleMedium" style={{ 
+              marginBottom: Spacing.md,
+              color: '#F59E0B' // Orange color for in-progress
+            }}>
+              ⏳ In Progress ({inProgressVisits.length})
+            </ThemedText>
+
+            {inProgressVisits.map((visit) => (
+              <VisitCard
+                key={visit.id}
+                visit={visit}
+                onPress={() => handleVisitPress(visit.id)}
+                style={{ marginBottom: Spacing.md }}
+              />
+            ))}
+
+            <View style={{ height: Spacing.lg }} />
+          </>
+        )}
+
+        {/* Scheduled Visits */}
+        <ThemedText variant="titleMedium" style={{ marginBottom: Spacing.md }}>
+          📅 Scheduled Visits ({scheduledVisits.length})
+        </ThemedText>
+
+        {scheduledVisits.length === 0 ? (
+          <ThemedText variant="bodyMedium" style={{ fontStyle: 'italic', opacity: 0.7, marginBottom: Spacing.lg }}>
+            No scheduled visits
+          </ThemedText>
+        ) : (
+          scheduledVisits.map((visit) => (
+            <VisitCard
+              key={visit.id}
+              visit={visit}
+              onPress={() => handleVisitPress(visit.id)}
+              style={{ marginBottom: Spacing.md }}
+            />
+          ))
+        )}
+
+        {/* Completed Visits Section */}
+        <ThemedText variant="titleMedium" style={{ 
+          marginTop: Spacing.lg, 
+          marginBottom: Spacing.md,
+          color: '#10B981' // Green color for completed
+        }}>
+          ✅ Completed Today ({completedVisits.length})
+        </ThemedText>
+
+        {completedVisits.length === 0 ? (
+          <ThemedText variant="bodyMedium" style={{ fontStyle: 'italic', opacity: 0.7 }}>
+            No completed visits today
+          </ThemedText>
+        ) : (
+          completedVisits.map((visit) => (
+            <VisitCard
+              key={visit.id}
+              visit={visit}
+              onPress={() => handleVisitPress(visit.id)}
+              style={{ marginBottom: Spacing.md }}
+            />
+          ))
+        )}
+
+        {/* Visit Summary Statistics */}
+        {visits.length > 0 && (
+          <View style={{
+            marginTop: Spacing.xl,
+            padding: Spacing.md,
+            backgroundColor: 'rgba(0,0,0,0.05)',
+            borderRadius: Spacing.borderRadius.md,
+          }}>
+            <ThemedText variant="titleSmall" style={{ marginBottom: Spacing.sm }}>
+              📊 Today&apos;s Summary
+            </ThemedText>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View style={{ alignItems: 'center' }}>
+                <ThemedText variant="headlineSmall" style={{ fontWeight: 'bold' }}>
+                  {visits.length}
+                </ThemedText>
+                <ThemedText variant="bodySmall">Total</ThemedText>
+              </View>
+              
+              <View style={{ alignItems: 'center' }}>
+                <ThemedText variant="headlineSmall" style={{ fontWeight: 'bold', color: '#10B981' }}>
+                  {completedVisits.length}
+                </ThemedText>
+                <ThemedText variant="bodySmall">Completed</ThemedText>
+              </View>
+              
+              <View style={{ alignItems: 'center' }}>
+                <ThemedText variant="headlineSmall" style={{ fontWeight: 'bold', color: '#F59E0B' }}>
+                  {inProgressVisits.length}
+                </ThemedText>
+                <ThemedText variant="bodySmall">In Progress</ThemedText>
+              </View>
+              
+              <View style={{ alignItems: 'center' }}>
+                <ThemedText variant="headlineSmall" style={{ fontWeight: 'bold', color: '#6B7280' }}>
+                  {scheduledVisits.length}
+                </ThemedText>
+                <ThemedText variant="bodySmall">Remaining</ThemedText>
+              </View>
+            </View>
           </View>
         )}
-
-        {/* Show error message */}
-        {error && (
-          <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
-            <ThemedText variant="bodyMedium" style={{ color: 'red', marginBottom: Spacing.sm }}>
-              Error loading patients: {error}
-            </ThemedText>
-            <Button 
-              title="Retry" 
-              variant="outlined" 
-              onPress={refreshPatients}
-              size="small"
-            />
-          </Card>
-        )}
-
-        {/* Render database patients */}
-        {patients.map((patient) => (
-          <PalliativePatientCard
-            key={patient.id}
-            patientName={patient.name}
-            patientId={patient.id}
-            location={{
-              address: patient.address,
-              coordinates: patient.coordinates
-            }}
-            priority={patient.priority}
-            onPress={() => handlePatientPress(getPatientWithNotes(patient))}
-            style={{ marginBottom: Spacing.md }}
-          >
-            {/* Simplified last seen information */}
-            {patient.last_seen_by && (
-              <View style={{ marginTop: Spacing.sm, marginLeft: -Spacing.sm }}>
-                <ThemedText variant="bodySmall" style={{ marginBottom: Spacing.xs, marginLeft: Spacing.sm }}>
-                  Last seen: {new Date(patient.last_seen_by.date).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric' 
-                  })} at {patient.last_seen_by.time}
-                </ThemedText>
-                <View style={{ 
-                  flexDirection: 'row', 
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(0,0,0,0.05)',
-                  paddingHorizontal: Spacing.sm,
-                  paddingVertical: Spacing.xs,
-                  borderRadius: Spacing.borderRadius.sm,
-                  alignSelf: 'flex-start',
-                  marginLeft: Spacing.sm
-                }}>
-                  <ThemedText variant="bodySmall" style={{ fontWeight: '600', marginRight: Spacing.xs }}>
-                    {patient.last_seen_by.provider}
-                  </ThemedText>
-                  <View style={{
-                    backgroundColor: primaryColor + '20',
-                    paddingHorizontal: Spacing.xs,
-                    paddingVertical: 2,
-                    borderRadius: Spacing.borderRadius.xs,
-                    borderWidth: 1,
-                    borderColor: primaryColor + '40'
-                  }}>
-                    <ThemedText variant="labelSmall" style={{ 
-                      color: primaryColor, 
-                      fontWeight: '600',
-                      fontSize: 10
-                    }}>
-                      {patient.last_seen_by.discipline.toUpperCase()}
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-            )}
-          </PalliativePatientCard>
-        ))}
-
-        {/* Show message when no patients */}
-        {!loading && patients.length === 0 && !error && (
-          <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
-            <ThemedText variant="bodyMedium" style={{ textAlign: 'center' }}>
-              No patients found. The database will be initialized with sample data automatically.
-            </ThemedText>
-          </Card>
-        )}
-
-        {/* Patient Details Drawer */}
-        <PatientDetailsDrawer
-          visible={drawerVisible}
-          patient={selectedPatient}
-          onClose={handleCloseDrawer}
-          onEditNotes={handleEditNotes}
-        />
-
-        {/* Notes Editor */}
-        <FullScreenNotesEditor
-          visible={notesEditorVisible}
-          patient={editingPatient}
-          initialNotes={editingPatient ? (patientNotes[editingPatient.id] || editingPatient.notes || '') : ''}
-          onSave={handleSaveNotes}
-          onClose={handleCloseNotesEditor}
-        />
       </ScrollView>
     </ThemedView>
   );

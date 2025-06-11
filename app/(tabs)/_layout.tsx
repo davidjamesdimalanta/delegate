@@ -1,16 +1,15 @@
-import { Ionicons } from '@expo/vector-icons';
+import { HapticTab } from '@/components/HapticTab';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import TabBarBackground from '@/components/ui/TabBarBackground';
+import { useEnhancedColorScheme } from '@/components/ui/ThemeProvider';
+import { Colors } from '@/constants/Colors';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { useEnhancedColorScheme } from '@/components/ui/ThemeProvider';
-import { Colors } from '@/constants/Colors';
-
-export default function TabLayout(): React.JSX.Element {
+export default function TabLayout() {
   const colorScheme = useEnhancedColorScheme();
-
+  
   return (
     <Tabs
       screenOptions={{
@@ -27,54 +26,22 @@ export default function TabLayout(): React.JSX.Element {
         }),
       }}>
       <Tabs.Screen
-        name="visits"
-        options={{
-          title: 'Visits',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? "medical" : "medical-outline"} 
-              size={24} 
-              color={color} 
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? "clipboard" : "clipboard-outline"} 
-              size={24} 
-              color={color} 
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="index"
         options={{
-          title: 'Patients',
+          title: 'Visits',
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? "people" : "people-outline"} 
-              size={24} 
-              color={color} 
-            />
+            <IconSymbol size={28} name={focused ? 'calendar.badge.plus' : 'calendar'} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Settings',
+          title: 'Explore',
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? "settings" : "settings-outline"} 
-              size={24} 
-              color={color} 
-            />
+            <IconSymbol size={28} name={focused ? 'paperplane.fill' : 'paperplane'} color={color} />
           ),
         }}
       />

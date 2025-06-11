@@ -8,6 +8,10 @@
     "scheme": "delegate",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_ERROR_RECOVERY"
+    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -42,9 +46,6 @@
           "backgroundColor": "#ffffff"
         }
       ]
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
+    ]
   }
 }

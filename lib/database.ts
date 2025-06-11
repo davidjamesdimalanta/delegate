@@ -1,4 +1,4 @@
-import { supabase } from './supabase-minimal'
+import { supabase } from './supabase'
 
 // Database Types (based on your sample patients data)
 export type Database = {
@@ -328,26 +328,37 @@ export async function getPatientsByPriority(priority: string): Promise<{ data: P
   }
 }
 
-// Since realtime is disabled, we'll use polling for subscriptions
+// Real-time subscriptions using Supabase's enabled WebSocket support
 export function subscribeToPatients(callback: (patients: Patient[]) => void) {
-  console.log('Setting up patients polling (realtime disabled)')
+  console.log('🔄 Setting up real-time patients subscription');
   
-  // Poll every 30 seconds for updates
-  const interval = setInterval(async () => {
-    try {
-      const { data: patients } = await getAllPatients()
-      if (patients) {
-        callback(patients)
+  const subscription = supabase
+    .channel('patients-changes')
+    .on('postgres_changes', 
+      { event: '*', schema: 'public', table: 'patients' }, 
+      async (payload: { eventType: string; new: any; old: any; errors: any }) => {
+        console.log('👥 Patient change detected:', payload.eventType);
+        
+        // Refresh all patients when any change occurs
+        try {
+          const { data } = await getAllPatients();
+          if (data) {
+            callback(data);
+          }
+        } catch (error) {
+          console.error('❌ Error refreshing patients after change:', error);
+        }
       }
-    } catch (error) {
-      console.error('Error polling patients:', error)
-    }
-  }, 30000) // 30 seconds
+    )
+         .subscribe((status: string) => {
+       console.log('📡 Patients subscription status:', status);
+     });
 
   // Return cleanup function
   return () => {
-    clearInterval(interval)
-  }
+    console.log('🔕 Unsubscribing from patients changes');
+    supabase.removeChannel(subscription);
+  };
 }
 
 // =============================================================================
@@ -497,26 +508,37 @@ export async function searchTasks(query: string): Promise<{ data: Task[] | null,
   }
 }
 
-// Since realtime is disabled, we'll use polling for subscriptions
+// Real-time subscriptions using Supabase's enabled WebSocket support
 export function subscribeToTasks(callback: (tasks: Task[]) => void) {
-  console.log('Setting up tasks polling (realtime disabled)')
+  console.log('🔄 Setting up real-time tasks subscription');
   
-  // Poll every 30 seconds for updates
-  const interval = setInterval(async () => {
-    try {
-      const { data: tasks } = await getAllTasks()
-      if (tasks) {
-        callback(tasks)
+  const subscription = supabase
+    .channel('tasks-changes')
+    .on('postgres_changes', 
+      { event: '*', schema: 'public', table: 'tasks' }, 
+      async (payload: { eventType: string; new: any; old: any; errors: any }) => {
+        console.log('📋 Task change detected:', payload.eventType);
+        
+        // Refresh all tasks when any change occurs
+        try {
+          const { data } = await getAllTasks();
+          if (data) {
+            callback(data);
+          }
+        } catch (error) {
+          console.error('❌ Error refreshing tasks after change:', error);
+        }
       }
-    } catch (error) {
-      console.error('Error polling tasks:', error)
-    }
-  }, 30000) // 30 seconds
+    )
+    .subscribe((status: string) => {
+      console.log('📡 Tasks subscription status:', status);
+    });
 
   // Return cleanup function
   return () => {
-    clearInterval(interval)
-  }
+    console.log('🔕 Unsubscribing from tasks changes');
+    supabase.removeChannel(subscription);
+  };
 }
 
 // Add this function to check tasks table

@@ -135,7 +135,7 @@ export type CombinedScreenProps<
   RootKey extends keyof RootStackParamList,
   TabKey extends keyof TabParamList = never
 > = RootStackScreenProps<RootKey> & 
-    (TabKey extends never ? {} : TabScreenProps<TabKey>);
+    (TabKey extends never ? Record<string, never> : TabScreenProps<TabKey>);
 
 // ===================================================================
 // NAVIGATION HELPERS
